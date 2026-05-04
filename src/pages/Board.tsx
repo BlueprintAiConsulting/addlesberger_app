@@ -1,5 +1,6 @@
 import { useState, useEffect, FormEvent } from 'react'
 import { where, orderBy, Timestamp } from 'firebase/firestore'
+import { format, isPast, isToday } from 'date-fns'
 import { Plus, Archive } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { useCollection } from '@/hooks/useCollection'
@@ -7,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { addItem, updateItem, archiveItem, deleteItem } from '@/lib/firestore'
 import { Modal } from '@/components/Modal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import type { BoardItem, BoardCategory, BoardPriority, BoardStatus } from '@/types'
+import type { BoardItem, BoardCategory, BoardPriority, BoardStatus, Member } from '@/types'
 import * as T from '@/types'
 
 const COLUMNS: { status: BoardStatus; label: string }[] = [
@@ -48,6 +49,7 @@ export function Board() {
   const { data: boardItems } = useCollection<BoardItem>(
     'boardItems', constraints, [showArchived]
   )
+  const { data: members } = useCollection<Member>('members', [])
 
   const filteredItems = filterCategory === 'all'
     ? boardItems
@@ -209,6 +211,18 @@ export function Board() {
                           👤 {item.assignedTo}
                         </p>
                       )}
+                      {item.dueDate && (() => {
+                        const due = item.dueDate.toDate()
+                        const overdue = isPast(due) && !isToday(due) && item.status !== 'done'
+                        return (
+                          <p style={{
+                            margin: '4px 0 0', fontSize: 12, fontWeight: 500,
+                            color: overdue ? 'var(--danger)' : 'var(--info)',
+                          }}>
+                            📅 {format(due, 'EEE, MMM d')}{overdue ? ' — overdue' : ''}
+                          </p>
+                        )
+                      })()}
                       {/* Quick move buttons */}
                       <div
                         className="row gap-sm"
@@ -301,11 +315,15 @@ export function Board() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label className="label">Assigned To</label>
-              <input
-                className="input" value={assignedTo}
+              <select
+                className="input select" value={assignedTo}
                 onChange={(e) => setAssignedTo(e.target.value)}
-                placeholder="Name"
-              />
+              >
+                <option value="">Unassigned</option>
+                {members.map(m => (
+                  <option key={m.id} value={m.displayName}>{m.displayName}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="label">Due Date</label>

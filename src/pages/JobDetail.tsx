@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { doc, onSnapshot, Timestamp } from 'firebase/firestore'
+import { doc, onSnapshot, Timestamp, orderBy } from 'firebase/firestore'
 import { format } from 'date-fns'
-import { ArrowLeft, Phone, Mail, MapPin, Edit2, Archive } from 'lucide-react'
+import { ArrowLeft, Phone, Mail, MapPin, Edit2, Archive, FileText, Image as ImageIcon } from 'lucide-react'
 import { db, COMPANY_ID } from '@/firebase'
 import { updateItem, archiveItem, unarchiveItem } from '@/lib/firestore'
+import { useCollection } from '@/hooks/useCollection'
 import { Modal } from '@/components/Modal'
-import type { Job, JobStatus } from '@/types'
+import type { Job, JobStatus, Estimate, Photo } from '@/types'
 import * as T from '@/types'
 
 const STATUS_FLOW: JobStatus[] = ['lead','estimate-sent','approved','scheduled','in-progress','complete','invoiced','paid']
@@ -149,6 +150,12 @@ export function JobDetail() {
         </div>
       )}
 
+      {/* Linked Estimates */}
+      <LinkedEstimates jobId={job.id} />
+
+      {/* Linked Photos */}
+      <LinkedPhotos jobId={job.id} />
+
       {/* Edit modal */}
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit Job">
         <div className="stack stack-md">
@@ -168,6 +175,53 @@ export function JobDetail() {
           <button className="btn btn-primary btn-full" onClick={handleSave}>Save Changes</button>
         </div>
       </Modal>
+    </div>
+  )
+}
+
+function LinkedEstimates({ jobId }: { jobId: string }) {
+  const { data: estimates } = useCollection<Estimate>('estimates', [orderBy('createdAt', 'desc')])
+  const linked = estimates.filter(e => e.jobId === jobId)
+  if (linked.length === 0) return null
+  return (
+    <div className="card">
+      <h3 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 12px', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.04em' }}>
+        <span className="row gap-sm"><FileText size={16} /> Linked Estimates</span>
+      </h3>
+      <div className="stack stack-sm">
+        {linked.map(est => (
+          <div key={est.id} className="row row-between" style={{ padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+            <div>
+              <span style={{ fontWeight: 600, fontSize: 14 }}>{est.customerName}</span>
+              <span style={{ fontSize: 12, color: 'var(--muted)', marginLeft: 8 }}>{est.lineItems.length} items</span>
+            </div>
+            <div className="row gap-sm">
+              <span style={{ fontWeight: 700, color: 'var(--brand)' }}>${est.total.toLocaleString()}</span>
+              <span className={`badge ${T.ESTIMATE_STATUS_COLORS[est.status]}`} style={{ fontSize: 10, padding: '2px 6px' }}>{T.ESTIMATE_STATUS_LABELS[est.status]}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function LinkedPhotos({ jobId }: { jobId: string }) {
+  const { data: photos } = useCollection<Photo>('photos', [orderBy('createdAt', 'desc')])
+  const linked = photos.filter(p => p.jobId === jobId)
+  if (linked.length === 0) return null
+  return (
+    <div className="card">
+      <h3 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 12px', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.04em' }}>
+        <span className="row gap-sm"><ImageIcon size={16} /> Linked Photos ({linked.length})</span>
+      </h3>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: 6 }}>
+        {linked.map(photo => (
+          <div key={photo.id} style={{ aspectRatio: '1', borderRadius: 'var(--radius-sm)', overflow: 'hidden', background: '#E2E8F0' }}>
+            <img src={photo.url} alt={photo.caption} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

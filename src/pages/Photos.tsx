@@ -1,14 +1,15 @@
 import { useState, useEffect, useRef, FormEvent } from 'react'
 import { orderBy } from 'firebase/firestore'
 import { useLocation } from 'react-router-dom'
-import { Camera, Upload, X, Image as ImageIcon, Tag } from 'lucide-react'
+import { Camera, Upload, X, Image as ImageIcon, Tag, Trash2 } from 'lucide-react'
 import { useCollection } from '@/hooks/useCollection'
 import { useAuth } from '@/hooks/useAuth'
-import { addItem } from '@/lib/firestore'
-import { uploadPhoto } from '@/lib/storage'
+import { addItem, deleteItem } from '@/lib/firestore'
+import { uploadPhoto, deletePhoto } from '@/lib/storage'
 import { Modal } from '@/components/Modal'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { EmptyState } from '@/components/EmptyState'
-import type { Photo } from '@/types'
+import type { Photo, Job } from '@/types'
 
 const TAG_OPTIONS = ['before', 'after', 'damage', 'progress', 'complete', 'whiteboard', 'material']
 
@@ -18,6 +19,7 @@ export function Photos() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [viewPhoto, setViewPhoto] = useState<Photo | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Photo | null>(null)
   const [filterTag, setFilterTag] = useState<string>('all')
 
   // Auto-open file picker when navigated with state.openCreate (from Today quick add)
@@ -31,11 +33,13 @@ export function Photos() {
   // Upload form
   const [caption, setCaption] = useState('')
   const [tags, setTags] = useState<string[]>([])
+  const [photoJobId, setPhotoJobId] = useState<string | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
 
   const { data: photos } = useCollection<Photo>('photos', [orderBy('createdAt', 'desc')])
+  const { data: jobs } = useCollection<Job>('jobs', [orderBy('createdAt', 'desc')])
 
   const filtered = filterTag === 'all' ? photos : photos.filter(p => p.tags.includes(filterTag))
 
@@ -59,11 +63,11 @@ export function Photos() {
       const { url, fileName } = await uploadPhoto(selectedFile)
       await addItem('photos', {
         url, fileName, caption, tags,
-        thumbnailUrl: null, jobId: null,
+        thumbnailUrl: null, jobId: photoJobId,
         uploadedBy: user?.uid || '',
       })
       setUploadModalOpen(false)
-      setCaption(''); setTags([]); setSelectedFile(null); setPreviewUrl(null)
+      setCaption(''); setTags([]); setPhotoJobId(null); setSelectedFile(null); setPreviewUrl(null)
     } catch (err) {
       console.error('Upload failed:', err)
       alert('Upload failed. Please try again.')
@@ -138,6 +142,15 @@ export function Photos() {
               ))}
             </div>
           </div>
+          <div>
+            <label className="label">Link to Job (optional)</label>
+            <select className="input select" value={photoJobId || ''} onChange={e => setPhotoJobId(e.target.value || null)}>
+              <option value="">No job linked</option>
+              {jobs.filter(j => !j.archivedAt).map(j => (
+                <option key={j.id} value={j.id}>{j.customerName} — {j.address}</option>
+              ))}
+            </select>
+          </div>
           <button type="submit" className="btn btn-primary btn-full" disabled={uploading}>
             {uploading ? 'Uploading...' : 'Save Photo'}
           </button>
@@ -157,9 +170,35 @@ export function Photos() {
                 ))}
               </div>
             )}
+            <button
+              className="btn btn-danger btn-sm"
+              style={{ marginTop: 8 }}
+              onClick={() => { setViewPhoto(null); setDeleteTarget(viewPhoto) }}
+            >
+              <Trash2 size={16} /> Delete Photo
+            </button>
           </div>
         )}
       </Modal>
+
+      {/* Delete confirm */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete Photo"
+        message="Delete this photo permanently? This can't be undone."
+        confirmLabel="Delete"
+        danger
+        onConfirm={async () => {
+          if (deleteTarget) {
+            try {
+              await deletePhoto(deleteTarget.fileName)
+            } catch { /* file may already be gone */ }
+            await deleteItem('photos', deleteTarget.id)
+            setDeleteTarget(null)
+          }
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

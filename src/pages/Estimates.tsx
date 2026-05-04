@@ -1,13 +1,13 @@
 import { useState, FormEvent } from 'react'
 import { orderBy, Timestamp } from 'firebase/firestore'
-import { Plus, FileText, Copy } from 'lucide-react'
+import { Plus, FileText, Copy, Edit2, Trash2 } from 'lucide-react'
 import { useCollection } from '@/hooks/useCollection'
 import { useAuth } from '@/hooks/useAuth'
 import { addItem, updateItem, deleteItem } from '@/lib/firestore'
 import { Modal } from '@/components/Modal'
 import { EmptyState } from '@/components/EmptyState'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import type { Estimate, EstimateTemplate, EstimateStatus, LineItem } from '@/types'
+import type { Estimate, EstimateTemplate, EstimateStatus, LineItem, Job } from '@/types'
 import * as T from '@/types'
 
 export function Estimates() {
@@ -15,11 +15,15 @@ export function Estimates() {
   const [tab, setTab] = useState<'estimates' | 'templates'>('estimates')
   const [modalOpen, setModalOpen] = useState(false)
   const [templateModalOpen, setTemplateModalOpen] = useState(false)
+  const [editEstimate, setEditEstimate] = useState<Estimate | null>(null)
+  const [editTemplate, setEditTemplate] = useState<EstimateTemplate | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'estimate' | 'template'; id: string; name: string } | null>(null)
 
   // Estimate form
   const [customerName, setCustomerName] = useState('')
   const [address, setAddress] = useState('')
   const [notes, setNotes] = useState('')
+  const [jobId, setJobId] = useState<string | null>(null)
   const [lineItems, setLineItems] = useState<LineItem[]>([{ description: '', qty: 1, unitPrice: 0, unit: 'each', total: 0 }])
 
   // Template form
@@ -28,6 +32,7 @@ export function Estimates() {
 
   const { data: estimates } = useCollection<Estimate>('estimates', [orderBy('createdAt', 'desc')])
   const { data: templates } = useCollection<EstimateTemplate>('estimateTemplates', [orderBy('createdAt', 'desc')])
+  const { data: jobs } = useCollection<Job>('jobs', [orderBy('createdAt', 'desc')])
 
   const updateLineItem = (idx: number, field: keyof LineItem, value: string | number) => {
     const updated = [...lineItems]
@@ -41,25 +46,68 @@ export function Estimates() {
 
   const subtotal = lineItems.reduce((sum, li) => sum + li.total, 0)
 
-  const handleCreateEstimate = async (e: FormEvent) => {
-    e.preventDefault()
-    await addItem('estimates', {
-      jobId: null, customerName, address, lineItems, subtotal, tax: 0, total: subtotal,
-      status: 'draft' as EstimateStatus, notes, templateId: null, createdBy: user?.uid || '',
-    })
-    setModalOpen(false)
-    setCustomerName(''); setAddress(''); setNotes('')
+  // --- Estimate CRUD ---
+  const openCreateEstimate = () => {
+    setEditEstimate(null)
+    setCustomerName(''); setAddress(''); setNotes(''); setJobId(null)
     setLineItems([{ description: '', qty: 1, unitPrice: 0, unit: 'each', total: 0 }])
+    setModalOpen(true)
   }
 
-  const handleCreateTemplate = async (e: FormEvent) => {
+  const openEditEstimate = (est: Estimate) => {
+    setEditEstimate(est)
+    setCustomerName(est.customerName)
+    setAddress(est.address)
+    setNotes(est.notes)
+    setJobId(est.jobId)
+    setLineItems(est.lineItems.map(li => ({ ...li })))
+    setModalOpen(true)
+  }
+
+  const handleSubmitEstimate = async (e: FormEvent) => {
     e.preventDefault()
-    await addItem('estimateTemplates', { name: templateName, lineItems: templateLines, createdBy: user?.uid || '' })
-    setTemplateModalOpen(false)
+    const data = {
+      customerName, address, lineItems, subtotal, tax: 0, total: subtotal, notes, jobId,
+    }
+    if (editEstimate) {
+      await updateItem('estimates', editEstimate.id, data)
+    } else {
+      await addItem('estimates', {
+        ...data, jobId: null, status: 'draft' as EstimateStatus,
+        templateId: null, createdBy: user?.uid || '',
+      })
+    }
+    setModalOpen(false)
+  }
+
+  // --- Template CRUD ---
+  const openCreateTemplate = () => {
+    setEditTemplate(null)
     setTemplateName(''); setTemplateLines([{ description: '', defaultQty: 1, defaultUnitPrice: 0, unit: 'each' }])
+    setTemplateModalOpen(true)
+  }
+
+  const openEditTemplate = (tmpl: EstimateTemplate) => {
+    setEditTemplate(tmpl)
+    setTemplateName(tmpl.name)
+    setTemplateLines(tmpl.lineItems.map(li => ({ ...li })))
+    setTemplateModalOpen(true)
+  }
+
+  const handleSubmitTemplate = async (e: FormEvent) => {
+    e.preventDefault()
+    const data = { name: templateName, lineItems: templateLines }
+    if (editTemplate) {
+      await updateItem('estimateTemplates', editTemplate.id, data)
+    } else {
+      await addItem('estimateTemplates', { ...data, createdBy: user?.uid || '' })
+    }
+    setTemplateModalOpen(false)
   }
 
   const useTemplate = (tmpl: EstimateTemplate) => {
+    setEditEstimate(null)
+    setCustomerName(''); setAddress(''); setNotes(''); setJobId(null)
     setLineItems(tmpl.lineItems.map(li => ({ description: li.description, qty: li.defaultQty, unitPrice: li.defaultUnitPrice, unit: li.unit, total: li.defaultQty * li.defaultUnitPrice })))
     setModalOpen(true)
   }
@@ -72,7 +120,7 @@ export function Estimates() {
     <div className="stack stack-lg">
       <div className="page-header">
         <h1 className="page-title">Estimates</h1>
-        <button className="btn btn-accent btn-sm" onClick={() => tab === 'templates' ? setTemplateModalOpen(true) : setModalOpen(true)}>
+        <button className="btn btn-accent btn-sm" onClick={() => tab === 'templates' ? openCreateTemplate() : openCreateEstimate()}>
           <Plus size={18} /> {tab === 'templates' ? 'Template' : 'Estimate'}
         </button>
       </div>
@@ -85,11 +133,11 @@ export function Estimates() {
 
       {tab === 'estimates' ? (
         estimates.length === 0 ? (
-          <EmptyState icon={<FileText />} message="No estimates yet" action={<button className="btn btn-primary btn-sm" onClick={() => setModalOpen(true)}>Create Estimate</button>} />
+          <EmptyState icon={<FileText />} message="No estimates yet" action={<button className="btn btn-primary btn-sm" onClick={openCreateEstimate}>Create Estimate</button>} />
         ) : (
           <div className="stack stack-sm">
             {estimates.map(est => (
-              <div key={est.id} className="card">
+              <div key={est.id} className="card card-pressable" onClick={() => openEditEstimate(est)}>
                 <div className="row row-between gap-sm" style={{ marginBottom: 8 }}>
                   <div style={{ flex: 1 }}>
                     <p style={{ margin: '0 0 2px', fontWeight: 600, fontSize: 16 }}>{est.customerName}</p>
@@ -101,7 +149,7 @@ export function Estimates() {
                   <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--brand)' }}>${est.total.toLocaleString()}</span>
                   <span style={{ fontSize: 12, color: 'var(--muted)' }}>{est.lineItems.length} items</span>
                 </div>
-                <div className="row gap-sm" style={{ flexWrap: 'wrap' }}>
+                <div className="row gap-sm" style={{ flexWrap: 'wrap' }} onClick={e => e.stopPropagation()}>
                   {est.status === 'draft' && <button className="btn btn-sm btn-primary" onClick={() => changeEstimateStatus(est, 'sent')}>Mark Sent</button>}
                   {est.status === 'sent' && (
                     <>
@@ -116,7 +164,7 @@ export function Estimates() {
         )
       ) : (
         templates.length === 0 ? (
-          <EmptyState icon={<Copy />} message="No templates yet" action={<button className="btn btn-primary btn-sm" onClick={() => setTemplateModalOpen(true)}>Create Template</button>} />
+          <EmptyState icon={<Copy />} message="No templates yet" action={<button className="btn btn-primary btn-sm" onClick={openCreateTemplate}>Create Template</button>} />
         ) : (
           <div className="stack stack-sm">
             {templates.map(tmpl => (
@@ -126,7 +174,11 @@ export function Estimates() {
                     <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: 16 }}>{tmpl.name}</p>
                     <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>{tmpl.lineItems.length} line items</p>
                   </div>
-                  <button className="btn btn-sm btn-primary" onClick={() => useTemplate(tmpl)}>Use</button>
+                  <div className="row gap-sm">
+                    <button className="btn btn-sm btn-primary" onClick={() => useTemplate(tmpl)}>Use</button>
+                    <button className="btn btn-sm btn-outline" onClick={() => openEditTemplate(tmpl)}><Edit2 size={14} /></button>
+                    <button className="btn btn-sm btn-ghost" onClick={() => setDeleteTarget({ type: 'template', id: tmpl.id, name: tmpl.name })}><Trash2 size={14} /></button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -134,14 +186,24 @@ export function Estimates() {
         )
       )}
 
-      <button className="fab" onClick={() => tab === 'templates' ? setTemplateModalOpen(true) : setModalOpen(true)}><Plus size={24} /></button>
+      <button className="fab" onClick={() => tab === 'templates' ? openCreateTemplate() : openCreateEstimate()}><Plus size={24} /></button>
 
-      {/* New Estimate Modal */}
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="New Estimate">
-        <form onSubmit={handleCreateEstimate} className="stack stack-md">
+      {/* Estimate Create/Edit Modal */}
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editEstimate ? 'Edit Estimate' : 'New Estimate'}>
+        <form onSubmit={handleSubmitEstimate} className="stack stack-md">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div><label className="label">Customer</label><input className="input" value={customerName} onChange={e => setCustomerName(e.target.value)} required /></div>
             <div><label className="label">Address</label><input className="input" value={address} onChange={e => setAddress(e.target.value)} required /></div>
+          </div>
+
+          <div>
+            <label className="label">Link to Job (optional)</label>
+            <select className="input select" value={jobId || ''} onChange={e => setJobId(e.target.value || null)}>
+              <option value="">No job linked</option>
+              {jobs.filter(j => !j.archivedAt).map(j => (
+                <option key={j.id} value={j.id}>{j.customerName} — {j.address}</option>
+              ))}
+            </select>
           </div>
 
           <div>
@@ -163,28 +225,59 @@ export function Estimates() {
           </div>
 
           <div><label className="label">Notes</label><textarea className="input textarea" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Terms, conditions, etc." /></div>
-          <button type="submit" className="btn btn-primary btn-full">Create Estimate</button>
+
+          <div className="row gap-sm" style={{ justifyContent: 'flex-end' }}>
+            {editEstimate && (
+              <button type="button" className="btn btn-danger btn-sm" onClick={() => {
+                setModalOpen(false)
+                setDeleteTarget({ type: 'estimate', id: editEstimate.id, name: editEstimate.customerName })
+              }}>
+                <Trash2 size={14} /> Delete
+              </button>
+            )}
+            <button type="submit" className="btn btn-primary">
+              {editEstimate ? 'Save Changes' : 'Create Estimate'}
+            </button>
+          </div>
         </form>
       </Modal>
 
-      {/* New Template Modal */}
-      <Modal open={templateModalOpen} onClose={() => setTemplateModalOpen(false)} title="New Template">
-        <form onSubmit={handleCreateTemplate} className="stack stack-md">
+      {/* Template Create/Edit Modal */}
+      <Modal open={templateModalOpen} onClose={() => setTemplateModalOpen(false)} title={editTemplate ? 'Edit Template' : 'New Template'}>
+        <form onSubmit={handleSubmitTemplate} className="stack stack-md">
           <div><label className="label">Template Name</label><input className="input" value={templateName} onChange={e => setTemplateName(e.target.value)} required placeholder='e.g. "Standard Tear-Off & Replace"' /></div>
           <div>
             <label className="label">Default Line Items</label>
             {templateLines.map((li, idx) => (
-              <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 8, marginBottom: 8 }}>
+              <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 8, marginBottom: 8 }}>
                 <input className="input" placeholder="Description" value={li.description} onChange={e => { const u = [...templateLines]; u[idx].description = e.target.value; setTemplateLines(u) }} style={{ minHeight: 40 }} />
                 <input className="input" type="number" placeholder="Qty" value={li.defaultQty} onChange={e => { const u = [...templateLines]; u[idx].defaultQty = parseFloat(e.target.value) || 0; setTemplateLines(u) }} style={{ minHeight: 40 }} />
                 <input className="input" type="number" placeholder="Price" value={li.defaultUnitPrice} onChange={e => { const u = [...templateLines]; u[idx].defaultUnitPrice = parseFloat(e.target.value) || 0; setTemplateLines(u) }} style={{ minHeight: 40 }} />
+                {templateLines.length > 1 && <button type="button" className="btn btn-ghost btn-sm" onClick={() => setTemplateLines(templateLines.filter((_, i) => i !== idx))} style={{ minHeight: 40, padding: '0 8px' }}>✕</button>}
               </div>
             ))}
             <button type="button" className="btn btn-outline btn-sm" onClick={() => setTemplateLines([...templateLines, { description: '', defaultQty: 1, defaultUnitPrice: 0, unit: 'each' }])}><Plus size={14} /> Add Line</button>
           </div>
-          <button type="submit" className="btn btn-primary btn-full">Save Template</button>
+          <button type="submit" className="btn btn-primary btn-full">{editTemplate ? 'Save Template' : 'Create Template'}</button>
         </form>
       </Modal>
+
+      {/* Delete confirm */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title={`Delete ${deleteTarget?.type === 'template' ? 'Template' : 'Estimate'}`}
+        message={`Delete "${deleteTarget?.name}"? This can't be undone.`}
+        confirmLabel="Delete"
+        danger
+        onConfirm={async () => {
+          if (deleteTarget) {
+            const col = deleteTarget.type === 'template' ? 'estimateTemplates' : 'estimates'
+            await deleteItem(col, deleteTarget.id)
+            setDeleteTarget(null)
+          }
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }
