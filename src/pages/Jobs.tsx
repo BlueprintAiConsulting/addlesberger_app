@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react'
+import { useState, useEffect, FormEvent } from 'react'
 import { where, orderBy, Timestamp } from 'firebase/firestore'
 import { Plus, Search, Briefcase } from 'lucide-react'
 import { useCollection } from '@/hooks/useCollection'
@@ -8,16 +8,25 @@ import { Modal } from '@/components/Modal'
 import { EmptyState } from '@/components/EmptyState'
 import type { Job, JobStatus } from '@/types'
 import * as T from '@/types'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 
 const STATUS_FILTERS = ['all', 'active', 'complete', 'archived'] as const
 
 export function Jobs() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [filter, setFilter] = useState<string>('all')
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
+
+  // Auto-open create modal when navigated with state.openCreate (from Today quick add)
+  useEffect(() => {
+    if ((location.state as any)?.openCreate) {
+      setModalOpen(true)
+      window.history.replaceState({}, '')
+    }
+  }, [location.state])
 
   // Form state
   const [customerName, setCustomerName] = useState('')

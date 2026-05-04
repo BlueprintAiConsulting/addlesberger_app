@@ -1,6 +1,7 @@
-import { useState, FormEvent } from 'react'
+import { useState, useEffect, FormEvent } from 'react'
 import { where, orderBy, Timestamp } from 'firebase/firestore'
 import { Plus, Archive } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import { useCollection } from '@/hooks/useCollection'
 import { useAuth } from '@/hooks/useAuth'
 import { addItem, updateItem, archiveItem, deleteItem } from '@/lib/firestore'
@@ -16,6 +17,7 @@ const COLUMNS: { status: BoardStatus; label: string }[] = [
 ]
 
 export function Board() {
+  const location = useLocation()
   const { user } = useAuth()
   const [showArchived, setShowArchived] = useState(false)
   const [filterCategory, setFilterCategory] = useState<BoardCategory | 'all'>('all')
@@ -29,6 +31,15 @@ export function Board() {
   const [priority, setPriority] = useState<BoardPriority>('normal')
   const [assignedTo, setAssignedTo] = useState('')
   const [dueDate, setDueDate] = useState('')
+
+  // Auto-open create modal when navigated with state.openCreate (from Today quick add)
+  useEffect(() => {
+    if ((location.state as any)?.openCreate) {
+      setModalOpen(true)
+      // Clear state so back navigation doesn't re-trigger
+      window.history.replaceState({}, '')
+    }
+  }, [location.state])
 
   const constraints = showArchived
     ? [orderBy('createdAt', 'desc')]

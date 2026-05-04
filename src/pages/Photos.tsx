@@ -1,5 +1,6 @@
-import { useState, useRef, FormEvent } from 'react'
+import { useState, useEffect, useRef, FormEvent } from 'react'
 import { orderBy } from 'firebase/firestore'
+import { useLocation } from 'react-router-dom'
 import { Camera, Upload, X, Image as ImageIcon, Tag } from 'lucide-react'
 import { useCollection } from '@/hooks/useCollection'
 import { useAuth } from '@/hooks/useAuth'
@@ -13,10 +14,19 @@ const TAG_OPTIONS = ['before', 'after', 'damage', 'progress', 'complete', 'white
 
 export function Photos() {
   const { user } = useAuth()
+  const location = useLocation()
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [viewPhoto, setViewPhoto] = useState<Photo | null>(null)
   const [filterTag, setFilterTag] = useState<string>('all')
+
+  // Auto-open file picker when navigated with state.openCreate (from Today quick add)
+  useEffect(() => {
+    if ((location.state as any)?.openCreate) {
+      setTimeout(() => fileRef.current?.click(), 300)
+      window.history.replaceState({}, '')
+    }
+  }, [location.state])
 
   // Upload form
   const [caption, setCaption] = useState('')

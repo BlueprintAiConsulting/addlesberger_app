@@ -76,15 +76,15 @@ export function Today() {
 
       {/* Quick actions */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-        <button className="btn btn-outline btn-sm" style={{ flexDirection: 'column', padding: '14px 8px', height: 'auto', minHeight: 'auto' }} onClick={() => navigate('/board')}>
+        <button className="btn btn-outline btn-sm" style={{ flexDirection: 'column', padding: '14px 8px', height: 'auto', minHeight: 'auto' }} onClick={() => navigate('/board', { state: { openCreate: true } })}>
           <ClipboardList size={20} />
           <span style={{ fontSize: 12 }}>Board Item</span>
         </button>
-        <button className="btn btn-outline btn-sm" style={{ flexDirection: 'column', padding: '14px 8px', height: 'auto', minHeight: 'auto' }} onClick={() => navigate('/jobs')}>
+        <button className="btn btn-outline btn-sm" style={{ flexDirection: 'column', padding: '14px 8px', height: 'auto', minHeight: 'auto' }} onClick={() => navigate('/jobs', { state: { openCreate: true } })}>
           <Briefcase size={20} />
           <span style={{ fontSize: 12 }}>New Job</span>
         </button>
-        <button className="btn btn-outline btn-sm" style={{ flexDirection: 'column', padding: '14px 8px', height: 'auto', minHeight: 'auto' }} onClick={() => navigate('/photos')}>
+        <button className="btn btn-outline btn-sm" style={{ flexDirection: 'column', padding: '14px 8px', height: 'auto', minHeight: 'auto' }} onClick={() => navigate('/photos', { state: { openCreate: true } })}>
           <Camera size={20} />
           <span style={{ fontSize: 12 }}>Photo</span>
         </button>
