@@ -177,20 +177,27 @@ export function Board() {
           const isInbox = col.status === 'inbox'
           return (
             <div key={col.status} className="board-col" style={{ minWidth: 260, flex: '0 0 260px' }}>
-              <div className="row row-between" style={{ marginBottom: 10 }}>
+              <div className={`row row-between ${
+                col.status === 'inbox' ? 'col-header-inbox' :
+                col.status === 'estimates' ? 'col-header-estimates' :
+                col.status === 'repairs' ? 'col-header-repairs' :
+                col.status === 'activeJobs' ? 'col-header-active' :
+                col.status === 'waitingOn' ? 'col-header-waiting' :
+                'col-header-completed'
+              }`} style={{ marginBottom: 10 }}>
                 <h3 style={{
-                  fontSize: 13, fontWeight: 700, margin: 0,
-                  textTransform: 'uppercase', letterSpacing: '0.04em',
-                  color: isInbox ? 'var(--brand)' : 'var(--text-secondary)',
+                  fontSize: 12, fontWeight: 700, margin: 0,
+                  textTransform: 'uppercase', letterSpacing: '0.06em',
+                  color: 'var(--text-secondary)',
                 }}>
-                  {isInbox && <Inbox size={14} style={{ verticalAlign: -2, marginRight: 4 }} />}
                   {col.label}
                 </h3>
                 <span style={{
-                  fontSize: 13, fontWeight: 600,
+                  fontSize: 12, fontWeight: 700,
                   color: isInbox && items.length > 0 ? 'var(--brand)' : 'var(--muted)',
-                  background: isInbox && items.length > 0 ? '#FFF0EC' : 'var(--bg)',
+                  background: isInbox && items.length > 0 ? 'var(--brand-subtle)' : 'var(--bg)',
                   padding: '2px 8px', borderRadius: 999,
+                  minWidth: 24, textAlign: 'center',
                 }}>
                   {items.length}
                 </span>

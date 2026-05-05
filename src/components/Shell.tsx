@@ -21,16 +21,19 @@ export function Shell({ children }: { children: ReactNode }) {
       <header className="app-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
-            width: 36, height: 36, borderRadius: 8,
-            background: '#C7330A', display: 'flex',
+            width: 36, height: 36, borderRadius: 10,
+            background: 'linear-gradient(135deg, #C7330A 0%, #E04A1F 100%)',
+            display: 'flex',
             alignItems: 'center', justifyContent: 'center',
-            fontSize: 18, fontWeight: 800, color: 'white',
+            fontSize: 15, fontWeight: 800, color: 'white',
+            letterSpacing: '-0.02em',
+            boxShadow: '0 2px 8px rgba(199, 51, 10, 0.3)',
           }}>RL</div>
           <div>
-            <h1 style={{ fontSize: 16, fontWeight: 700, margin: 0, lineHeight: 1.2 }}>
+            <h1 style={{ fontSize: 16, fontWeight: 700, margin: 0, lineHeight: 1.2, letterSpacing: '-0.01em' }}>
               R. L. Addlesberger
             </h1>
-            <span style={{ fontSize: 11, opacity: 0.7, fontWeight: 500 }}>Roofing</span>
+            <span style={{ fontSize: 10, opacity: 0.55, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Roofing Operations</span>
           </div>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>

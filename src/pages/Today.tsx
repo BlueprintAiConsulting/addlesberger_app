@@ -83,8 +83,8 @@ export function Today() {
       {/* Unprocessed whiteboard photos */}
       {unprocessedPhotos.length > 0 && (
         <div>
-          <h2 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 12px' }}>
-            <Camera size={18} style={{ verticalAlign: -3, marginRight: 6, color: 'var(--warning)' }} />
+          <h2 className="section-heading">
+            <Camera size={18} style={{ color: 'var(--warning)' }} />
             Unprocessed Whiteboard Photos
           </h2>
           <div className="stack stack-sm">
@@ -107,8 +107,8 @@ export function Today() {
       {/* Inbox items */}
       {inboxItems.length > 0 && (
         <div>
-          <h2 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 12px' }}>
-            <Inbox size={18} style={{ verticalAlign: -3, marginRight: 6, color: 'var(--brand)' }} />
+          <h2 className="section-heading">
+            <Inbox size={18} style={{ color: 'var(--brand)' }} />
             Inbox / Needs Sorted
           </h2>
           <div className="stack stack-sm">
@@ -142,8 +142,8 @@ export function Today() {
       {/* Urgent items (not in inbox) */}
       {urgentItems.filter(b => T.migrateBoardStatus(b.status) !== 'inbox').length > 0 && (
         <div>
-          <h2 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 12px' }}>
-            <AlertTriangle size={18} style={{ verticalAlign: -3, marginRight: 6, color: 'var(--danger)' }} />
+          <h2 className="section-heading">
+            <AlertTriangle size={18} style={{ color: 'var(--danger)' }} />
             Urgent
           </h2>
           <div className="stack stack-sm">
@@ -168,8 +168,8 @@ export function Today() {
       {/* Jobs waiting / needing action */}
       {(waitingJobs.length > 0 || needsInvoice.length > 0) && (
         <div>
-          <h2 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 12px' }}>
-            <Clock size={18} style={{ verticalAlign: -3, marginRight: 6 }} />
+          <h2 className="section-heading">
+            <Clock size={18} />
             Jobs Needing Action
           </h2>
           <div className="stack stack-sm">
