@@ -106,7 +106,7 @@ export interface Photo {
   fileName: string
 }
 
-// ─── Company & Members ───────────────────────────────────
+// ─── Company ─────────────────────────────────────────────
 export interface Company {
   id: string
   name: string
@@ -114,15 +114,6 @@ export interface Company {
   email: string
   createdAt: Timestamp
   updatedAt: Timestamp
-}
-
-export interface Member {
-  id: string
-  email: string
-  displayName: string
-  role: 'member'
-  joinedAt: Timestamp
-  lastActive: Timestamp
 }
 
 // ─── UI Helpers ──────────────────────────────────────────
