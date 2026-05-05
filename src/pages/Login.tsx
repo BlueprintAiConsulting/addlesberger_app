@@ -28,86 +28,54 @@ export function Login() {
       alignItems: 'center',
       justifyContent: 'center',
       padding: 24,
-      background: '#222222',
+      background: '#202124',
     }}>
       <div style={{
         width: '100%',
-        maxWidth: 400,
-        background: 'var(--surface)',
-        borderRadius: 'var(--radius-lg)',
+        maxWidth: 380,
+        background: '#fff',
+        borderRadius: 16,
         padding: 32,
-        boxShadow: 'var(--shadow-lg)',
+        boxShadow: '0 8px 40px rgba(0,0,0,.2)',
       }}>
-        {/* Logo area */}
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{
-            width: 64,
-            height: 64,
-            borderRadius: 16,
-            background: '#C7330A',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: 16,
-            fontSize: 26,
-            fontWeight: 800,
-            color: 'white',
+            width: 56, height: 56, borderRadius: 14,
+            background: 'linear-gradient(135deg, #D35400, #E67E22)',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            marginBottom: 16, fontSize: 22, fontWeight: 800, color: '#fff',
+            boxShadow: '0 4px 16px rgba(211,84,0,.25)',
           }}>RL</div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 2px', color: 'var(--text)' }}>
+          <h1 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 2px', color: '#202124' }}>
             R. L. Addlesberger
           </h1>
-          <p style={{ fontSize: 14, color: 'var(--muted)', margin: '0 0 0', fontWeight: 500 }}>
-            Roofing — Job Board
+          <p style={{ fontSize: 13, color: '#9AA0A6', margin: 0, fontWeight: 500 }}>
+            Whiteboard Sync
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="stack stack-md">
           <div>
             <label className="label">Email</label>
-            <input
-              className="input"
-              type="email"
-              placeholder="you@company.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
+            <input className="input" type="email" placeholder="you@company.com"
+              value={email} onChange={(e) => setEmail(e.target.value)}
+              required autoComplete="email" />
           </div>
-
           <div>
             <label className="label">Password</label>
-            <input
-              className="input"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              autoComplete="current-password"
-            />
+            <input className="input" type="password" placeholder="••••••••"
+              value={password} onChange={(e) => setPassword(e.target.value)}
+              required minLength={6} autoComplete="current-password" />
           </div>
-
           {error && (
             <div style={{
-              padding: '10px 14px',
-              borderRadius: 'var(--radius-sm)',
-              background: '#FEF2F2',
-              color: 'var(--danger)',
-              fontSize: 13,
-              fontWeight: 500,
-            }}>
-              {error}
-            </div>
+              padding: '10px 14px', borderRadius: 8,
+              background: '#FCE8E6', color: '#D93025',
+              fontSize: 13, fontWeight: 500,
+            }}>{error}</div>
           )}
-
-          <button
-            className="btn btn-primary btn-full"
-            type="submit"
-            disabled={loading}
-          >
-            {loading ? 'Please wait...' : 'Sign In'}
+          <button className="btn btn-primary btn-full" type="submit" disabled={loading}>
+            {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
       </div>

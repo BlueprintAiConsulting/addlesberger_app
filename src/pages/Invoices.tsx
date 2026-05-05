@@ -316,21 +316,19 @@ export function Invoices() {
         ) : (
           <div className="stack stack-sm">
             {invoices.map(inv => (
-              <div key={inv.id} className="card">
-                <div className="row row-between gap-sm" style={{ marginBottom: 8 }}>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ margin: '0 0 2px', fontWeight: 600, fontSize: 16 }}>{inv.clientName}</p>
-                    <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>{inv.clientAddress}</p>
+              <div key={inv.id} className="invoice-card">
+                <div className="row row-between gap-sm" style={{ marginBottom: 10 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: '0 0 2px', fontWeight: 700, fontSize: 15 }}>{inv.clientName}</p>
+                    <p className="truncate" style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>{inv.clientAddress}</p>
                   </div>
-                  <div className="stack stack-sm" style={{ alignItems: 'flex-end', gap: 4 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
                     <span className={`badge ${T.INVOICE_STATUS_COLORS[inv.status]}`}>{T.INVOICE_STATUS_LABELS[inv.status]}</span>
                     <span className={`badge ${T.INVOICE_PAYMENT_STATUS_COLORS[inv.paymentStatus]}`}>{T.INVOICE_PAYMENT_STATUS_LABELS[inv.paymentStatus]}</span>
                   </div>
                 </div>
-                <div className="row row-between" style={{ marginBottom: 8 }}>
-                  <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--brand)', letterSpacing: '-0.02em' }}>
-                    ${inv.total?.toLocaleString() || '0'}
-                  </span>
+                <div className="row row-between" style={{ marginBottom: 12 }}>
+                  <span className="invoice-amount">${inv.total?.toLocaleString() || '0'}</span>
                   <span style={{ fontSize: 12, color: 'var(--muted)' }}>
                     {inv.invoiceDate ? format(inv.invoiceDate.toDate(), 'MMM d, yyyy') : ''}
                   </span>
@@ -346,7 +344,7 @@ export function Invoices() {
                   {inv.status === 'sent' && (
                     <button className="btn btn-sm btn-primary" onClick={() => changeInvoiceStatus(inv, 'paid')}>Mark Paid</button>
                   )}
-                  <button className="btn btn-sm btn-ghost" style={{ color: 'var(--danger)' }}
+                  <button className="btn btn-sm btn-ghost" style={{ color: 'var(--danger)', marginLeft: 'auto' }}
                     onClick={() => setDeleteTarget({ type: 'invoice', id: inv.id, name: inv.clientName })}>
                     <Trash2 size={14} />
                   </button>
@@ -356,29 +354,31 @@ export function Invoices() {
           </div>
         )
       ) : (
-        <div className="stack stack-md">
+        <div className="stack stack-sm">
           {invoiceTemplates.length === 0 && (
-            <div className="card" style={{ textAlign: 'center', padding: 24 }}>
-              <p style={{ margin: '0 0 12px', color: 'var(--muted)' }}>No invoice templates yet.</p>
+            <div style={{ textAlign: 'center', padding: '40px 24px', background: 'var(--bg-tinted)', borderRadius: 'var(--radius-lg)', border: '1px dashed var(--border)' }}>
+              <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: 15, color: 'var(--text)' }}>No templates yet</p>
+              <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--muted)' }}>Load Addlesberger roofing defaults to get started</p>
               <button className="btn btn-primary btn-sm" onClick={seedDefaults}>
-                <Copy size={14} /> Load Default Templates
+                <Copy size={14} /> Load Defaults
               </button>
             </div>
           )}
           {invoiceTemplates.map(tmpl => (
-            <div key={tmpl.id} className="card">
-              <div className="row row-between">
-                <div style={{ flex: 1 }}>
-                  <p style={{ margin: '0 0 2px', fontWeight: 600, fontSize: 16 }}>{tmpl.name}</p>
-                  <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>{tmpl.jobType}</p>
-                </div>
-                <div className="row gap-sm">
-                  <button className="btn btn-sm btn-primary" onClick={() => { applyTemplate(tmpl.id); openCreateInvoice(); setTimeout(() => applyTemplate(tmpl.id), 50) }}>Use</button>
-                  <button className="btn btn-sm btn-outline" onClick={() => openEditTemplate(tmpl)}>Edit</button>
-                  <button className="btn btn-sm btn-ghost" onClick={() => setDeleteTarget({ type: 'invoiceTemplate', id: tmpl.id, name: tmpl.name })}>
-                    <Trash2 size={14} />
-                  </button>
-                </div>
+            <div key={tmpl.id} className="template-card">
+              <div style={{ marginBottom: 10 }}>
+                <p style={{ margin: '0 0 2px', fontWeight: 700, fontSize: 15 }}>{tmpl.name}</p>
+                <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.04em', fontWeight: 600 }}>{tmpl.jobType}</p>
+              </div>
+              <p className="truncate" style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                {tmpl.servicesPerformedText.split('\n')[0]}
+              </p>
+              <div className="row gap-sm">
+                <button className="btn btn-sm btn-primary" onClick={() => { applyTemplate(tmpl.id); openCreateInvoice(); setTimeout(() => applyTemplate(tmpl.id), 50) }}>Use Template</button>
+                <button className="btn btn-sm btn-outline" onClick={() => openEditTemplate(tmpl)}>Edit</button>
+                <button className="btn btn-sm btn-ghost" style={{ marginLeft: 'auto', color: 'var(--danger)' }} onClick={() => setDeleteTarget({ type: 'invoiceTemplate', id: tmpl.id, name: tmpl.name })}>
+                  <Trash2 size={14} />
+                </button>
               </div>
             </div>
           ))}

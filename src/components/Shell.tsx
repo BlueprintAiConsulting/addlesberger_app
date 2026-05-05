@@ -20,21 +20,17 @@ export function Shell({ children }: { children: ReactNode }) {
     <div className="app-shell">
       {/* Header */}
       <header className="app-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
-            width: 38, height: 38, borderRadius: 12,
-            background: 'linear-gradient(135deg, #B8451A 0%, #D05A2E 100%)',
-            display: 'flex',
-            alignItems: 'center', justifyContent: 'center',
-            fontSize: 14, fontWeight: 800, color: 'white',
-            letterSpacing: '-0.02em',
-            boxShadow: '0 3px 10px rgba(184, 69, 26, 0.25)',
+            width: 34, height: 34, borderRadius: 10,
+            background: 'linear-gradient(135deg, #D35400, #E67E22)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 13, fontWeight: 800, color: '#fff',
+            boxShadow: '0 2px 8px rgba(211,84,0,.3)',
           }}>RL</div>
           <div>
-            <h1 style={{ fontSize: 16, fontWeight: 700, margin: 0, lineHeight: 1.2, letterSpacing: '-0.01em' }}>
-              R. L. Addlesberger
-            </h1>
-            <span style={{ fontSize: 10, opacity: 0.45, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Whiteboard Sync</span>
+            <h1 style={{ fontSize: 15, fontWeight: 600, margin: 0, lineHeight: 1.2 }}>R. L. Addlesberger</h1>
+            <span style={{ fontSize: 10, opacity: .4, fontWeight: 500, letterSpacing: '.06em', textTransform: 'uppercase' }}>Whiteboard Sync</span>
           </div>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
