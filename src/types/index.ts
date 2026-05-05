@@ -97,6 +97,74 @@ export interface EstimateTemplate {
   updatedAt: Timestamp
 }
 
+// ─── Invoices ─────────────────────────────────────────────
+export type InvoicePaymentStatus = 'unpaid' | 'depositPaid' | 'balanceDue' | 'paidInFull'
+export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'archived'
+
+export interface InvoiceTemplate {
+  id: string
+  name: string
+  jobType: string
+  companyHeaderText: string
+  servicesPerformedText: string
+  warrantyText: string
+  paymentInstructions: string
+  thankYouText: string
+  licenseText: string
+  active: boolean
+  createdBy: string
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+
+export interface Invoice {
+  id: string
+  jobId: string | null
+  templateId: string | null
+  clientName: string
+  clientAddress: string
+  invoiceDate: Timestamp
+  servicesPerformedText: string
+  warrantyText: string
+  total: number
+  paymentStatus: InvoicePaymentStatus
+  paymentInstructions: string
+  thankYouText: string
+  licenseText: string
+  status: InvoiceStatus
+  createdBy: string
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+
+export const INVOICE_PAYMENT_STATUS_LABELS: Record<InvoicePaymentStatus, string> = {
+  'unpaid': 'Unpaid',
+  'depositPaid': 'Deposit Paid',
+  'balanceDue': 'Balance Due',
+  'paidInFull': 'Paid in Full',
+}
+
+export const INVOICE_PAYMENT_STATUS_COLORS: Record<InvoicePaymentStatus, string> = {
+  'unpaid': 'bg-red-100 text-red-700',
+  'depositPaid': 'bg-amber-100 text-amber-700',
+  'balanceDue': 'bg-blue-100 text-blue-700',
+  'paidInFull': 'bg-emerald-100 text-emerald-700',
+}
+
+export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
+  'draft': 'Draft',
+  'sent': 'Sent',
+  'paid': 'Paid',
+  'archived': 'Archived',
+}
+
+export const INVOICE_STATUS_COLORS: Record<InvoiceStatus, string> = {
+  'draft': 'bg-slate-200 text-slate-700',
+  'sent': 'bg-blue-100 text-blue-700',
+  'paid': 'bg-emerald-100 text-emerald-700',
+  'archived': 'bg-slate-100 text-slate-500',
+}
+
 // ─── Photos ───────────────────────────────────────────────
 export type PhotoSource = 'ryan-whiteboard' | 'jobsite' | 'before' | 'after' | 'damage' | 'material' | 'other'
 

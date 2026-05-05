@@ -8,6 +8,7 @@ import { Board } from '@/pages/Board'
 import { Jobs } from '@/pages/Jobs'
 import { JobDetail } from '@/pages/JobDetail'
 import { Estimates } from '@/pages/Estimates'
+import { Invoices } from '@/pages/Invoices'
 import { Photos } from '@/pages/Photos'
 import { Settings } from '@/pages/Settings'
 
@@ -73,6 +74,7 @@ export default function App() {
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/jobs/:jobId" element={<JobDetail />} />
             <Route path="/estimates" element={<Estimates />} />
+            <Route path="/invoices" element={<Invoices />} />
             <Route path="/photos" element={<Photos />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/" replace />} />
