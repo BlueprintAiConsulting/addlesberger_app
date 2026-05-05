@@ -58,6 +58,7 @@ export function Board() {
   const [extractionError, setExtractionError] = useState('')
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [acceptingAll, setAcceptingAll] = useState(false)
+  const [autoCreated, setAutoCreated] = useState(0)
 
   useEffect(() => {
     if ((location.state as any)?.openCreate) {
@@ -139,19 +140,19 @@ export function Board() {
     setScanFile(file)
     setScanPreview(URL.createObjectURL(file))
     setExtractedItems([]); setExtractionSummary(''); setExtractionError('')
-    setEditingIndex(null)
+    setEditingIndex(null); setAutoCreated(0)
     setScanModalOpen(true)
+    // Auto-trigger scan immediately
+    setTimeout(() => runScan(file), 100)
   }
 
-  const handleScanPhoto = async () => {
-    if (!scanFile) return
+  const runScan = async (file: File) => {
     setScanning(true); setUploading(true); setExtractionError('')
 
     try {
-      // Upload photo first
-      const { url } = await uploadPhoto(scanFile)
+      const { url } = await uploadPhoto(file)
       await addItem('photos', {
-        url, fileName: scanFile.name, caption: 'Whiteboard scan',
+        url, fileName: file.name, caption: 'Whiteboard scan',
         tags: ['ryan-whiteboard'], source: 'ryan-whiteboard',
         processed: false, boardItemId: null, thumbnailUrl: null,
         jobId: null, uploadedBy: user?.uid || '',
@@ -165,8 +166,44 @@ export function Board() {
       } else if (result.items.length === 0) {
         setExtractionError('No readable items found on this whiteboard.')
       } else {
-        setExtractedItems(result.items)
-        setExtractionSummary(result.rawSummary)
+        // Auto-accept high-confidence items, show review for the rest
+        const highConf = result.items.filter(i => i.confidence === 'high')
+        const needsReview = result.items.filter(i => i.confidence !== 'high')
+
+        // Auto-create high-confidence items immediately
+        let created = 0
+        for (const item of highConf) {
+          await addItem('boardItems', {
+            title: item.customerName || item.description.slice(0, 60) || 'Whiteboard item',
+            description: [item.address && `📍 ${item.address}`, item.phone && `📞 ${item.phone}`, item.jobType !== 'other' && `🔧 ${item.jobType}`, item.estimateAmount && `💰 $${item.estimateAmount.toLocaleString()}`, item.description].filter(Boolean).join('\n'),
+            category: item.jobType === 'repair' ? 'repair' : 'estimate',
+            priority: item.priority, status: 'inbox' as BoardStatus,
+            source: 'ryan-whiteboard' as UpdateSource,
+            assignedTo: null, dueDate: null, createdBy: user?.uid || '', archivedAt: null,
+          })
+          if (item.customerName && (item.address || item.description)) {
+            await addItem('jobs', {
+              customerName: item.customerName, customerPhone: item.phone || '',
+              customerEmail: '', address: item.address || '',
+              description: item.description || '', status: 'lead',
+              estimateAmount: item.estimateAmount, invoiceAmount: null, paidAmount: null,
+              notes: `Auto-extracted from whiteboard on ${format(new Date(), 'MMM d, yyyy')}`,
+              scheduledDate: null, completedDate: null,
+              createdBy: user?.uid || '', archivedAt: null,
+            })
+          }
+          created++
+        }
+        setAutoCreated(created)
+
+        if (needsReview.length > 0) {
+          setExtractedItems(needsReview)
+          setExtractionSummary(result.rawSummary)
+        } else {
+          // All items were high-confidence — auto-close after brief success
+          setExtractionSummary(`✅ ${created} item${created !== 1 ? 's' : ''} auto-added to your Inbox`)
+          setTimeout(() => closeScanModal(), 2500)
+        }
       }
     } catch (err: any) {
       setExtractionError(err.message || 'Upload or scan failed')
@@ -369,14 +406,6 @@ export function Board() {
             <img src={scanPreview} alt="Whiteboard" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
           )}
 
-          {/* Pre-scan state */}
-          {extractedItems.length === 0 && !extractionError && !scanning && (
-            <button className="btn btn-primary btn-full" onClick={handleScanPhoto}
-              style={{ background: 'linear-gradient(135deg, #7C3AED, #9333EA)', border: 'none' }}>
-              <Sparkles size={16} /> Upload & Scan with AI
-            </button>
-          )}
-
           {/* Scanning */}
           {scanning && (
             <div style={{ textAlign: 'center', padding: '20px 0' }}>
@@ -387,11 +416,22 @@ export function Board() {
             </div>
           )}
 
+          {/* Auto-created success */}
+          {!scanning && autoCreated > 0 && extractedItems.length === 0 && !extractionError && (
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <span style={{ fontSize: 36, display: 'block', marginBottom: 10 }}>✅</span>
+              <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: 17, color: 'var(--success)' }}>
+                {autoCreated} item{autoCreated !== 1 ? 's' : ''} added to Inbox
+              </p>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Auto-created from high-confidence extraction</p>
+            </div>
+          )}
+
           {/* Error */}
           {extractionError && (
             <div style={{ padding: '12px 16px', borderRadius: 'var(--radius-sm)', background: 'var(--danger-bg)', color: 'var(--danger)', fontSize: 14 }}>
               {extractionError}
-              <button className="btn btn-outline btn-sm btn-full" style={{ marginTop: 10 }} onClick={handleScanPhoto}>Retry</button>
+              <button className="btn btn-outline btn-sm btn-full" style={{ marginTop: 10 }} onClick={() => runScan(scanFile!)}>Retry</button>
             </div>
           )}
 
