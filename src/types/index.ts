@@ -181,6 +181,20 @@ export interface Photo {
   uploadedBy: string
   createdAt: Timestamp
   fileName: string
+  extractedData?: {
+    items: {
+      customerName: string
+      address: string
+      phone: string
+      jobType: string
+      description: string
+      estimateAmount: number | null
+      priority: 'normal' | 'urgent'
+      confidence: 'high' | 'medium' | 'low'
+    }[]
+    rawSummary: string
+    extractedAt: string
+  }
 }
 
 // ─── Company ─────────────────────────────────────────────

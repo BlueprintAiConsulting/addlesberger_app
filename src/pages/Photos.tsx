@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, FormEvent } from 'react'
-import { orderBy } from 'firebase/firestore'
+import { orderBy, Timestamp } from 'firebase/firestore'
 import { format } from 'date-fns'
 import { useLocation } from 'react-router-dom'
-import { Camera, CheckCircle, Image as ImageIcon, Trash2 } from 'lucide-react'
+import { Camera, CheckCircle, Image as ImageIcon, Trash2, Sparkles, Loader2, ChevronDown, ChevronUp, Plus } from 'lucide-react'
 import { useCollection } from '@/hooks/useCollection'
 import { useAuth } from '@/hooks/useAuth'
 import { addItem, updateItem, deleteItem } from '@/lib/firestore'
 import { uploadPhoto, deletePhoto } from '@/lib/storage'
+import { extractWhiteboardData, type ExtractedItem } from '@/lib/whiteboardAi'
 import { Modal } from '@/components/Modal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { EmptyState } from '@/components/EmptyState'
@@ -14,6 +15,12 @@ import type { Photo, Job, BoardItem, PhotoSource } from '@/types'
 import * as T from '@/types'
 
 const PHOTO_SOURCES: PhotoSource[] = ['ryan-whiteboard', 'jobsite', 'before', 'after', 'damage', 'material', 'other']
+
+const CONFIDENCE_STYLES: Record<string, { bg: string; color: string; label: string }> = {
+  high: { bg: 'var(--success-bg)', color: 'var(--success)', label: 'High' },
+  medium: { bg: 'var(--warning-bg)', color: 'var(--warning)', label: 'Medium' },
+  low: { bg: 'var(--danger-bg)', color: 'var(--danger)', label: 'Low' },
+}
 
 export function Photos() {
   const { user } = useAuth()
@@ -24,6 +31,15 @@ export function Photos() {
   const [deleteTarget, setDeleteTarget] = useState<Photo | null>(null)
   const [filterSource, setFilterSource] = useState<string>('all')
   const [filterProcessed, setFilterProcessed] = useState<string>('all')
+
+  // AI extraction state
+  const [scanning, setScanning] = useState(false)
+  const [extractedItems, setExtractedItems] = useState<ExtractedItem[]>([])
+  const [extractionSummary, setExtractionSummary] = useState('')
+  const [extractionError, setExtractionError] = useState('')
+  const [showReview, setShowReview] = useState(false)
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [acceptingAll, setAcceptingAll] = useState(false)
 
   useEffect(() => {
     if ((location.state as any)?.openCreate) {
@@ -97,6 +113,118 @@ export function Photos() {
     setViewPhoto(null)
   }
 
+  // ─── AI Extraction ──────────────────────────────────────
+  const handleScanWhiteboard = async () => {
+    if (!viewPhoto) return
+    setScanning(true)
+    setExtractionError('')
+    setExtractedItems([])
+    setExtractionSummary('')
+
+    const result = await extractWhiteboardData(viewPhoto.url)
+
+    if (result.error) {
+      setExtractionError(result.error)
+    } else {
+      setExtractedItems(result.items)
+      setExtractionSummary(result.rawSummary)
+      if (result.items.length > 0) {
+        setShowReview(true)
+      } else {
+        setExtractionError('No readable items found on this whiteboard.')
+      }
+    }
+    setScanning(false)
+  }
+
+  const updateExtractedItem = (index: number, field: keyof ExtractedItem, value: any) => {
+    setExtractedItems(prev => prev.map((item, i) =>
+      i === index ? { ...item, [field]: value } : item
+    ))
+  }
+
+  const removeExtractedItem = (index: number) => {
+    setExtractedItems(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const handleAcceptAll = async () => {
+    if (!viewPhoto || extractedItems.length === 0) return
+    setAcceptingAll(true)
+
+    try {
+      for (const item of extractedItems) {
+        // Create board item
+        await addItem('boardItems', {
+          title: item.customerName || item.description.slice(0, 60) || 'Whiteboard item',
+          description: [
+            item.address && `📍 ${item.address}`,
+            item.phone && `📞 ${item.phone}`,
+            item.jobType && item.jobType !== 'other' && `🔧 ${item.jobType}`,
+            item.estimateAmount && `💰 $${item.estimateAmount.toLocaleString()}`,
+            item.description,
+          ].filter(Boolean).join('\n'),
+          category: item.jobType === 'repair' ? 'repair' : 'estimate',
+          priority: item.priority,
+          status: 'inbox',
+          source: 'ryan-whiteboard',
+          assignedTo: null,
+          dueDate: null,
+          createdBy: user?.uid || '',
+          archivedAt: null,
+        })
+
+        // Also create a Job if we have enough info
+        if (item.customerName && (item.address || item.description)) {
+          await addItem('jobs', {
+            customerName: item.customerName,
+            customerPhone: item.phone || '',
+            customerEmail: '',
+            address: item.address || '',
+            description: item.description || '',
+            status: 'lead',
+            estimateAmount: item.estimateAmount,
+            invoiceAmount: null,
+            paidAmount: null,
+            notes: `Auto-extracted from whiteboard photo on ${format(new Date(), 'MMM d, yyyy')}`,
+            scheduledDate: null,
+            completedDate: null,
+            createdBy: user?.uid || '',
+            archivedAt: null,
+          })
+        }
+      }
+
+      // Save extraction data to photo + mark processed
+      await updateItem('photos', viewPhoto.id, {
+        processed: true,
+        extractedData: {
+          items: extractedItems,
+          rawSummary: extractionSummary,
+          extractedAt: new Date().toISOString(),
+        },
+      })
+
+      // Reset state
+      setShowReview(false)
+      setExtractedItems([])
+      setExtractionSummary('')
+      setViewPhoto(null)
+    } catch (err) {
+      console.error('Failed to create items:', err)
+      alert('Failed to save extracted items. Please try again.')
+    }
+    setAcceptingAll(false)
+  }
+
+  const closeViewModal = () => {
+    setViewPhoto(null)
+    setShowReview(false)
+    setExtractedItems([])
+    setExtractionSummary('')
+    setExtractionError('')
+    setEditingIndex(null)
+  }
+
   return (
     <div className="stack stack-lg">
       <div className="page-header">
@@ -115,12 +243,7 @@ export function Photos() {
           <button className={`filter-tab ${filterSource === 'jobsite' ? 'active' : ''}`} onClick={() => setFilterSource('jobsite')}>Jobsite</button>
           <button className={`filter-tab ${filterSource === 'damage' ? 'active' : ''}`} onClick={() => setFilterSource('damage')}>Damage</button>
         </div>
-        <select
-          className="input select"
-          style={{ width: 'auto', fontSize: 13, padding: '6px 10px', minHeight: 'auto' }}
-          value={filterProcessed}
-          onChange={e => setFilterProcessed(e.target.value)}
-        >
+        <select className="input select" style={{ width: 'auto', fontSize: 13, padding: '6px 10px', minHeight: 'auto' }} value={filterProcessed} onChange={e => setFilterProcessed(e.target.value)}>
           <option value="all">All Status</option>
           <option value="unprocessed">Needs Processed</option>
           <option value="processed">Processed ✓</option>
@@ -142,20 +265,15 @@ export function Photos() {
                 border: isWhiteboard && !isProcessed ? '2px solid var(--warning)' : 'none',
               }}>
                 <img src={photo.url} alt={photo.caption} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                {/* Status badges */}
                 <div style={{ position: 'absolute', top: 4, right: 4, display: 'flex', gap: 4 }}>
                   {isProcessed && (
-                    <span style={{ fontSize: 10, fontWeight: 700, background: 'rgba(34,197,94,0.9)', color: 'white', padding: '2px 6px', borderRadius: 4 }}>
-                      ✓
-                    </span>
+                    <span style={{ fontSize: 10, fontWeight: 700, background: 'rgba(34,197,94,0.9)', color: 'white', padding: '2px 6px', borderRadius: 4 }}>✓</span>
                   )}
                   {isWhiteboard && !isProcessed && (
-                    <span style={{ fontSize: 10, fontWeight: 700, background: 'rgba(245,158,11,0.9)', color: 'white', padding: '2px 6px', borderRadius: 4 }}>
-                      Needs Processed
-                    </span>
+                    <span style={{ fontSize: 10, fontWeight: 700, background: 'rgba(245,158,11,0.9)', color: 'white', padding: '2px 6px', borderRadius: 4 }}>Needs Processed</span>
                   )}
                 </div>
-                <div style={{ position: 'absolute', bottom: 4, left: 4, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <div style={{ position: 'absolute', bottom: 4, left: 4 }}>
                   <span style={{ fontSize: 10, fontWeight: 600, background: 'rgba(0,0,0,0.6)', color: 'white', padding: '2px 6px', borderRadius: 4 }}>
                     {T.PHOTO_SOURCE_LABELS[(photo as any).source as PhotoSource] || (photo as any).source || 'Photo'}
                   </span>
@@ -203,8 +321,8 @@ export function Photos() {
         </form>
       </Modal>
 
-      {/* View photo modal */}
-      <Modal open={!!viewPhoto} onClose={() => setViewPhoto(null)} title={viewPhoto?.caption || 'Photo'}>
+      {/* View photo modal — with AI scan */}
+      <Modal open={!!viewPhoto} onClose={closeViewModal} title={viewPhoto?.caption || 'Photo'}>
         {viewPhoto && (
           <div className="stack stack-md">
             <img src={viewPhoto.url} alt={viewPhoto.caption} style={{ width: '100%', borderRadius: 'var(--radius-sm)' }} />
@@ -226,9 +344,26 @@ export function Photos() {
               Uploaded {format(viewPhoto.createdAt.toDate(), 'MMM d, yyyy h:mm a')}
             </p>
 
+            {/* Action buttons */}
             <div className="row gap-sm" style={{ flexWrap: 'wrap' }}>
+              {/* AI Scan button — only for whiteboard photos */}
+              {(viewPhoto as any).source === 'ryan-whiteboard' && !(viewPhoto as any).processed && !showReview && (
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={handleScanWhiteboard}
+                  disabled={scanning}
+                  style={{ background: 'linear-gradient(135deg, #7C3AED, #9333EA)', border: 'none' }}
+                >
+                  {scanning ? (
+                    <><Loader2 size={16} style={{ animation: 'spin .7s linear infinite' }} /> Scanning...</>
+                  ) : (
+                    <><Sparkles size={16} /> Scan Whiteboard</>
+                  )}
+                </button>
+              )}
+
               {!(viewPhoto as any).processed ? (
-                <button className="btn btn-primary btn-sm" onClick={() => markProcessed(viewPhoto)}>
+                <button className="btn btn-outline btn-sm" onClick={() => markProcessed(viewPhoto)}>
                   <CheckCircle size={16} /> Mark Processed
                 </button>
               ) : (
@@ -236,13 +371,162 @@ export function Photos() {
                   Undo Processed
                 </button>
               )}
-              <button
-                className="btn btn-danger btn-sm"
-                onClick={() => { setViewPhoto(null); setDeleteTarget(viewPhoto) }}
-              >
+              <button className="btn btn-danger btn-sm" onClick={() => { closeViewModal(); setDeleteTarget(viewPhoto) }}>
                 <Trash2 size={16} /> Delete
               </button>
             </div>
+
+            {/* Extraction error */}
+            {extractionError && (
+              <div style={{ padding: '12px 16px', borderRadius: 'var(--radius-sm)', background: 'var(--danger-bg)', color: 'var(--danger)', fontSize: 14 }}>
+                {extractionError}
+              </div>
+            )}
+
+            {/* Previously extracted data */}
+            {viewPhoto.extractedData && !showReview && (
+              <div style={{ padding: '12px 16px', borderRadius: 'var(--radius)', background: 'var(--purple-bg)', border: '1px solid rgba(124,58,237,.15)' }}>
+                <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: 'var(--purple)', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                  Previously Extracted
+                </p>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
+                  {viewPhoto.extractedData.items.length} item{viewPhoto.extractedData.items.length !== 1 ? 's' : ''} extracted on {format(new Date(viewPhoto.extractedData.extractedAt), 'MMM d, yyyy')}
+                </p>
+              </div>
+            )}
+
+            {/* ─── AI Review UI ──────────────────────────── */}
+            {showReview && extractedItems.length > 0 && (
+              <div className="stack stack-md" style={{ animation: 'fadeInUp .3s ease both' }}>
+                {/* Summary */}
+                <div style={{ padding: '12px 16px', borderRadius: 'var(--radius)', background: 'var(--purple-bg)', border: '1px solid rgba(124,58,237,.15)' }}>
+                  <div className="row gap-sm" style={{ marginBottom: 4 }}>
+                    <Sparkles size={14} style={{ color: 'var(--purple)' }} />
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--purple)', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                      AI Extraction
+                    </span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
+                    Found {extractedItems.length} item{extractedItems.length !== 1 ? 's' : ''}. {extractionSummary}
+                  </p>
+                </div>
+
+                {/* Extracted items */}
+                {extractedItems.map((item, idx) => {
+                  const conf = CONFIDENCE_STYLES[item.confidence] || CONFIDENCE_STYLES.medium
+                  const isEditing = editingIndex === idx
+                  return (
+                    <div key={idx} className="card" style={{ borderLeft: `3px solid var(--purple)` }}>
+                      <div className="row row-between gap-sm" style={{ marginBottom: 8 }}>
+                        <div className="row gap-sm">
+                          <span style={{ fontSize: 13, fontWeight: 700 }}>#{idx + 1}</span>
+                          <span className="badge" style={{ background: conf.bg, color: conf.color, fontSize: 10 }}>
+                            {conf.label} confidence
+                          </span>
+                          {item.priority === 'urgent' && <span className="badge badge-urgent">Urgent</span>}
+                        </div>
+                        <div className="row gap-sm">
+                          <button className="btn btn-ghost btn-sm" style={{ padding: 4, minHeight: 28 }} onClick={() => setEditingIndex(isEditing ? null : idx)}>
+                            {isEditing ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                          </button>
+                          <button className="btn btn-ghost btn-sm" style={{ padding: 4, minHeight: 28, color: 'var(--danger)' }} onClick={() => removeExtractedItem(idx)}>
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Summary view */}
+                      {!isEditing && (
+                        <div>
+                          <p style={{ margin: '0 0 2px', fontWeight: 600, fontSize: 15 }}>
+                            {item.customerName || 'Unknown Customer'}
+                          </p>
+                          {item.address && <p style={{ margin: '0 0 2px', fontSize: 13, color: 'var(--text-secondary)' }}>📍 {item.address}</p>}
+                          {item.phone && <p style={{ margin: '0 0 2px', fontSize: 13, color: 'var(--text-secondary)' }}>📞 {item.phone}</p>}
+                          <div className="row gap-sm" style={{ marginTop: 4 }}>
+                            <span className="badge" style={{ background: 'var(--bg)', fontSize: 11 }}>{item.jobType}</span>
+                            {item.estimateAmount != null && (
+                              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--brand)' }}>
+                                ${item.estimateAmount.toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                          {item.description && (
+                            <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--muted)', lineHeight: 1.5 }}>{item.description}</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Edit view */}
+                      {isEditing && (
+                        <div className="stack stack-sm" style={{ marginTop: 4 }}>
+                          <div>
+                            <label className="label">Customer Name</label>
+                            <input className="input" value={item.customerName} onChange={e => updateExtractedItem(idx, 'customerName', e.target.value)} />
+                          </div>
+                          <div>
+                            <label className="label">Address</label>
+                            <input className="input" value={item.address} onChange={e => updateExtractedItem(idx, 'address', e.target.value)} />
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                            <div>
+                              <label className="label">Phone</label>
+                              <input className="input" value={item.phone} onChange={e => updateExtractedItem(idx, 'phone', e.target.value)} />
+                            </div>
+                            <div>
+                              <label className="label">Estimate $</label>
+                              <input className="input" type="number" value={item.estimateAmount ?? ''} onChange={e => updateExtractedItem(idx, 'estimateAmount', e.target.value ? Number(e.target.value) : null)} />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="label">Job Type</label>
+                            <select className="input select" value={item.jobType} onChange={e => updateExtractedItem(idx, 'jobType', e.target.value)}>
+                              <option value="shingle">Shingle</option>
+                              <option value="rubber roof">Rubber Roof</option>
+                              <option value="metal roof">Metal Roof</option>
+                              <option value="repair">Repair</option>
+                              <option value="gutter">Gutter</option>
+                              <option value="flashing">Flashing</option>
+                              <option value="inspection">Inspection</option>
+                              <option value="other">Other</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="label">Notes / Description</label>
+                            <textarea className="input textarea" value={item.description} onChange={e => updateExtractedItem(idx, 'description', e.target.value)} rows={3} />
+                          </div>
+                          <div>
+                            <label className="label">Priority</label>
+                            <select className="input select" value={item.priority} onChange={e => updateExtractedItem(idx, 'priority', e.target.value as 'normal' | 'urgent')}>
+                              <option value="normal">Normal</option>
+                              <option value="urgent">Urgent</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+
+                {/* Accept All */}
+                <button
+                  className="btn btn-primary btn-full"
+                  onClick={handleAcceptAll}
+                  disabled={acceptingAll || extractedItems.length === 0}
+                  style={{ background: 'linear-gradient(135deg, #7C3AED, #9333EA)', border: 'none' }}
+                >
+                  {acceptingAll ? (
+                    <><Loader2 size={16} style={{ animation: 'spin .7s linear infinite' }} /> Creating Items...</>
+                  ) : (
+                    <><Plus size={16} /> Accept All — Create {extractedItems.length} Item{extractedItems.length !== 1 ? 's' : ''}</>
+                  )}
+                </button>
+
+                <button className="btn btn-ghost btn-full" onClick={() => { setShowReview(false); setExtractedItems([]) }}>
+                  Cancel
+                </button>
+              </div>
+            )}
           </div>
         )}
       </Modal>
@@ -256,9 +540,7 @@ export function Photos() {
         danger
         onConfirm={async () => {
           if (deleteTarget) {
-            try {
-              await deletePhoto(deleteTarget.fileName)
-            } catch { /* file may already be gone */ }
+            try { await deletePhoto(deleteTarget.fileName) } catch { /* file may already be gone */ }
             await deleteItem('photos', deleteTarget.id)
             setDeleteTarget(null)
           }
