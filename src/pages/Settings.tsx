@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react'
-import { doc, onSnapshot, orderBy } from 'firebase/firestore'
-import { Building2, Users, LogOut, User } from 'lucide-react'
+import { doc, onSnapshot } from 'firebase/firestore'
+import { Building2, LogOut, User } from 'lucide-react'
 import { db, COMPANY_ID } from '@/firebase'
 import { useAuth } from '@/hooks/useAuth'
-import { useCollection } from '@/hooks/useCollection'
-import { updateItem } from '@/lib/firestore'
 import { Modal } from '@/components/Modal'
-import type { Company, Member } from '@/types'
+import type { Company } from '@/types'
 
 export function Settings() {
   const { user, logout } = useAuth()
@@ -15,8 +13,6 @@ export function Settings() {
   const [companyName, setCompanyName] = useState('')
   const [companyPhone, setCompanyPhone] = useState('')
   const [companyEmail, setCompanyEmail] = useState('')
-
-  const { data: members } = useCollection<Member>('members', [])
 
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'companies', COMPANY_ID), (snap) => {
@@ -36,7 +32,6 @@ export function Settings() {
   }
 
   const handleSave = async () => {
-    // Update company doc directly
     const { updateDoc, serverTimestamp } = await import('firebase/firestore')
     await updateDoc(doc(db, 'companies', COMPANY_ID), {
       name: companyName,
@@ -68,35 +63,6 @@ export function Settings() {
           </div>
         ) : (
           <p style={{ color: 'var(--muted)', fontSize: 14 }}>Company info will appear here once set up.</p>
-        )}
-      </div>
-
-      {/* Members */}
-      <div className="card">
-        <div className="row gap-sm" style={{ marginBottom: 16 }}>
-          <Users size={20} style={{ color: 'var(--brand)' }} />
-          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Team Members</h2>
-        </div>
-        {members.length === 0 ? (
-          <p style={{ color: 'var(--muted)', fontSize: 14 }}>No members yet.</p>
-        ) : (
-          <div className="stack stack-sm">
-            {members.map(m => (
-              <div key={m.id} className="row gap-sm" style={{ padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: '50%', background: 'var(--brand)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white',
-                  fontSize: 14, fontWeight: 700, flexShrink: 0,
-                }}>
-                  {(m.displayName || m.email)[0].toUpperCase()}
-                </div>
-                <div>
-                  <p style={{ margin: 0, fontWeight: 600, fontSize: 15 }}>{m.displayName || 'Unknown'}</p>
-                  <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>{m.email}</p>
-                </div>
-              </div>
-            ))}
-          </div>
         )}
       </div>
 

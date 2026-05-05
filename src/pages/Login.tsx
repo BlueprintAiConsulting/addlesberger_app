@@ -2,11 +2,9 @@ import { useState, FormEvent } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 
 export function Login() {
-  const { login, register } = useAuth()
-  const [isRegister, setIsRegister] = useState(false)
+  const { login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [displayName, setDisplayName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -15,11 +13,7 @@ export function Login() {
     setError('')
     setLoading(true)
     try {
-      if (isRegister) {
-        await register(email, password, displayName)
-      } else {
-        await login(email, password)
-      }
+      await login(email, password)
     } catch (err: any) {
       setError(err.message?.replace('Firebase: ', '') || 'Something went wrong')
     }
@@ -63,25 +57,11 @@ export function Login() {
             Charlene's Job Board
           </h1>
           <p style={{ fontSize: 14, color: 'var(--muted)', margin: 0 }}>
-            {isRegister ? 'Create your account' : 'Sign in to get started'}
+            Sign in to get started
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="stack stack-md">
-          {isRegister && (
-            <div>
-              <label className="label">Your Name</label>
-              <input
-                className="input"
-                type="text"
-                placeholder="e.g. Charlene"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                required
-              />
-            </div>
-          )}
-
           <div>
             <label className="label">Email</label>
             <input
@@ -105,7 +85,7 @@ export function Login() {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              autoComplete={isRegister ? 'new-password' : 'current-password'}
+              autoComplete="current-password"
             />
           </div>
 
@@ -127,19 +107,9 @@ export function Login() {
             type="submit"
             disabled={loading}
           >
-            {loading ? 'Please wait...' : isRegister ? 'Create Account' : 'Sign In'}
+            {loading ? 'Please wait...' : 'Sign In'}
           </button>
         </form>
-
-        <div style={{ textAlign: 'center', marginTop: 20 }}>
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={() => { setIsRegister(!isRegister); setError('') }}
-            type="button"
-          >
-            {isRegister ? 'Already have an account? Sign in' : "Don't have an account? Register"}
-          </button>
-        </div>
       </div>
     </div>
   )

@@ -6,9 +6,10 @@ import { useLocation } from 'react-router-dom'
 import { useCollection } from '@/hooks/useCollection'
 import { useAuth } from '@/hooks/useAuth'
 import { addItem, updateItem, archiveItem, deleteItem } from '@/lib/firestore'
+import { ALLOWED_EMAILS } from '@/firebase'
 import { Modal } from '@/components/Modal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import type { BoardItem, BoardCategory, BoardPriority, BoardStatus, Member } from '@/types'
+import type { BoardItem, BoardCategory, BoardPriority, BoardStatus } from '@/types'
 import * as T from '@/types'
 
 const COLUMNS: { status: BoardStatus; label: string }[] = [
@@ -49,7 +50,6 @@ export function Board() {
   const { data: boardItems } = useCollection<BoardItem>(
     'boardItems', constraints, [showArchived]
   )
-  const { data: members } = useCollection<Member>('members', [])
 
   const filteredItems = filterCategory === 'all'
     ? boardItems
@@ -320,9 +320,10 @@ export function Board() {
                 onChange={(e) => setAssignedTo(e.target.value)}
               >
                 <option value="">Unassigned</option>
-                {members.map(m => (
-                  <option key={m.id} value={m.displayName}>{m.displayName}</option>
-                ))}
+                {ALLOWED_EMAILS.map((email: string) => {
+                  const name = email.split('@')[0].replace(/[.]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
+                  return <option key={email} value={name}>{name}</option>
+                })}
               </select>
             </div>
             <div>
