@@ -215,20 +215,56 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-.02em;line-height:1.2;color:var(--te
 .invoice-card:hover{box-shadow:var(--shadow-sm);border-color:var(--border)}
 .invoice-amount{font-size:24px;font-weight:800;color:var(--text);letter-spacing:-.02em}
 
-/* ═══ Mobile ═════════════════════════════════════════════ */
+/* ═══ Mobile — optimized for Charlene's phone ═══════════ */
 @media(max-width:480px){
-  .page-title{font-size:22px}
-  .stat-card{padding:14px 8px}
-  .stat-value{font-size:24px}
-  .card{padding:14px}
-  .btn{min-height:42px;font-size:13px}
-  .btn-sm{min-height:32px;font-size:12px}
-  .input{min-height:42px;font-size:14px}
-  .modal-content{padding:20px 16px}
+  .page-title{font-size:20px}
+  .page-header{flex-wrap:wrap;gap:8px}
+  .stat-card{padding:12px 8px}
+  .stat-value{font-size:22px}
+  .card{padding:14px 12px}
+  .btn{min-height:46px;font-size:14px;border-radius:var(--radius)}
+  .btn-sm{min-height:36px;font-size:13px;padding:8px 14px}
+  .input{min-height:46px;font-size:16px;border-radius:var(--radius)}
+  .select{font-size:16px}
+  .textarea{font-size:16px}
+  .modal-content{padding:20px 16px 28px;padding-bottom:calc(28px + env(safe-area-inset-bottom,0));max-height:92dvh}
+  .modal-header h2{font-size:17px}
+  .filter-tabs{gap:6px;margin-bottom:10px;padding:2px 0}
+  .filter-tab{padding:8px 14px;font-size:12px}
+  .empty-state{padding:32px 16px}
+  .badge{padding:3px 10px;font-size:10px}
+  /* Fat finger-friendly nav items */
+  .bottom-nav-item{padding:8px 10px;gap:3px;min-width:0}
+  .bottom-nav-item svg{width:24px;height:24px}
+  .bottom-nav{height:72px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0))}
+  .app-content{padding:16px 12px calc(80px + env(safe-area-inset-bottom,0))}
+  .fab{bottom:calc(80px + env(safe-area-inset-bottom,0));right:12px;width:52px;height:52px;border-radius:14px}
+  /* Prevent iOS zoom on focus */
+  input,select,textarea{font-size:16px!important}
+  /* Smooth momentum scrolling */
+  .board-scroll{-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;scroll-padding:0 12px;padding:0 4px 12px}
 }
 @media(max-width:767px){
-  .board-scroll{scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scroll-padding:0 16px}
-  .board-col{scroll-snap-align:start;min-width:80vw!important;flex:0 0 80vw!important}
+  .board-scroll{scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scroll-padding:0 12px}
+  .board-col{scroll-snap-align:start;min-width:82vw!important;flex:0 0 82vw!important}
+}
+/* Tall phone safe area for notch/island */
+@supports(padding: max(0px)){
+  .bottom-nav{padding-bottom:max(8px, env(safe-area-inset-bottom,0))}
+  @media(max-width:480px){
+    .app-content{padding-bottom:max(80px, calc(72px + env(safe-area-inset-bottom,0) + 16px))}
+    .fab{bottom:max(80px, calc(72px + env(safe-area-inset-bottom,0) + 8px))}
+  }
+}
+
+/* ═══ Touch Feedback ═════════════════════════════════════ */
+@media(hover:none) and (pointer:coarse){
+  .card-pressable:active{transform:scale(.97);transition:transform .08s}
+  .btn:active{transform:scale(.95);transition:transform .08s}
+  .quick-action:active{transform:scale(.94);transition:transform .08s}
+  .filter-tab:active{transform:scale(.94)}
+  .stat-card:active{transform:scale(.96)}
+  .fab:active{transform:scale(.88)}
 }
 
 /* ═══ Utilities ══════════════════════════════════════════ */
@@ -244,3 +280,4 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-.02em;line-height:1.2;color:var(--te
 .gap-lg{gap:16px}
 .truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .animate-in{animation:fadeInUp .35s var(--ease-out) both}
+
