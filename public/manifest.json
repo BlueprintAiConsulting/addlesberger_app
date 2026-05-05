@@ -1,11 +1,11 @@
 {
-  "name": "Charlene's Job Board",
-  "short_name": "Job Board",
-  "description": "Mobile operations board for Addlesberger Roofing",
+  "name": "R. L. Addlesberger Roofing",
+  "short_name": "RL Roofing",
+  "description": "Job management for R. L. Addlesberger Roofing",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F1F5F9",
-  "theme_color": "#1E3A5F",
+  "background_color": "#222222",
+  "theme_color": "#222222",
   "orientation": "portrait-primary",
   "icons": [
     {

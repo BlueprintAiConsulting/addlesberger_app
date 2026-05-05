@@ -19,7 +19,20 @@ export function Shell({ children }: { children: ReactNode }) {
     <div className="app-shell">
       {/* Header */}
       <header className="app-header">
-        <h1>Charlene's Job Board</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 8,
+            background: '#C7330A', display: 'flex',
+            alignItems: 'center', justifyContent: 'center',
+            fontSize: 18, fontWeight: 800, color: 'white',
+          }}>RL</div>
+          <div>
+            <h1 style={{ fontSize: 16, fontWeight: 700, margin: 0, lineHeight: 1.2 }}>
+              R. L. Addlesberger
+            </h1>
+            <span style={{ fontSize: 11, opacity: 0.7, fontWeight: 500 }}>Roofing</span>
+          </div>
+        </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 13, opacity: 0.8 }}>
             {user?.displayName || user?.email?.split('@')[0]}

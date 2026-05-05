@@ -28,7 +28,7 @@ export function Login() {
       alignItems: 'center',
       justifyContent: 'center',
       padding: 24,
-      background: 'var(--bg)',
+      background: '#222222',
     }}>
       <div style={{
         width: '100%',
@@ -36,28 +36,28 @@ export function Login() {
         background: 'var(--surface)',
         borderRadius: 'var(--radius-lg)',
         padding: 32,
-        boxShadow: 'var(--shadow-md)',
-        border: '1px solid var(--border)',
+        boxShadow: 'var(--shadow-lg)',
       }}>
         {/* Logo area */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{
-            width: 56,
-            height: 56,
+            width: 64,
+            height: 64,
             borderRadius: 16,
-            background: 'var(--brand)',
+            background: '#C7330A',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: 16,
-          }}>
-            <span style={{ fontSize: 28 }}>🏠</span>
-          </div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 4px', color: 'var(--text)' }}>
-            Charlene's Job Board
+            fontSize: 26,
+            fontWeight: 800,
+            color: 'white',
+          }}>RL</div>
+          <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 2px', color: 'var(--text)' }}>
+            R. L. Addlesberger
           </h1>
-          <p style={{ fontSize: 14, color: 'var(--muted)', margin: 0 }}>
-            Sign in to get started
+          <p style={{ fontSize: 14, color: 'var(--muted)', margin: '0 0 0', fontWeight: 500 }}>
+            Roofing — Job Board
           </p>
         </div>
 
