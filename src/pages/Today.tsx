@@ -5,7 +5,7 @@ import { format, startOfDay, endOfDay, isToday } from 'date-fns'
 import { Plus, ClipboardList, Briefcase, Camera, AlertTriangle, CalendarDays, ChevronRight } from 'lucide-react'
 import { useCollection } from '@/hooks/useCollection'
 import { EmptyState } from '@/components/EmptyState'
-import type { BoardItem, Job, JobStatus, JOB_STATUS_LABELS, JOB_STATUS_COLORS, BOARD_CATEGORY_LABELS, BOARD_CATEGORY_COLORS } from '@/types'
+import type { BoardItem, Job } from '@/types'
 import * as T from '@/types'
 
 export function Today() {
@@ -26,12 +26,12 @@ export function Today() {
 
   // Stats
   const activeJobs = jobs.filter(j => !['paid', 'complete'].includes(j.status))
-  const urgentItems = boardItems.filter(b => b.priority === 'urgent' && b.status !== 'done')
-  const todoItems = boardItems.filter(b => b.status === 'todo')
+  const urgentItems = boardItems.filter(b => b.priority === 'urgent' && T.migrateBoardStatus(b.status) !== 'completed')
+  const newItems = boardItems.filter(b => T.migrateBoardStatus(b.status) === 'new')
 
   // Today's items (due today or urgent)
   const todayItems = boardItems.filter(b => {
-    if (b.status === 'done') return false
+    if (T.migrateBoardStatus(b.status) === 'completed') return false
     if (b.priority === 'urgent') return true
     if (b.dueDate) {
       const due = b.dueDate.toDate()
@@ -63,8 +63,8 @@ export function Today() {
           <div className="stat-label">Active Jobs</div>
         </div>
         <div className="stat-card" onClick={() => navigate('/board')} style={{ cursor: 'pointer' }}>
-          <div className="stat-value">{todoItems.length}</div>
-          <div className="stat-label">To Do</div>
+          <div className="stat-value">{newItems.length}</div>
+          <div className="stat-label">New</div>
         </div>
         <div className="stat-card" onClick={() => navigate('/board')} style={{ cursor: 'pointer' }}>
           <div className="stat-value" style={{ color: urgentItems.length > 0 ? 'var(--danger)' : undefined }}>
@@ -106,8 +106,8 @@ export function Today() {
                 <div className="row row-between gap-sm">
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="row gap-sm" style={{ marginBottom: 4 }}>
-                      <span className={`badge ${T.BOARD_CATEGORY_COLORS[item.category]}`}>
-                        {T.BOARD_CATEGORY_LABELS[item.category]}
+                      <span className={`badge ${T.BOARD_CATEGORY_COLORS[T.migrateBoardCategory(item.category) as T.BoardCategory] || 'bg-slate-100 text-slate-600'}`}>
+                        {T.BOARD_CATEGORY_LABELS[T.migrateBoardCategory(item.category) as T.BoardCategory] || item.category}
                       </span>
                       {item.priority === 'urgent' && (
                         <span className="badge badge-urgent">Urgent</span>
