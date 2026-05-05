@@ -1,19 +1,18 @@
 import { useState, useEffect, FormEvent } from 'react'
 import { where, orderBy, Timestamp } from 'firebase/firestore'
 import { format, isPast, isToday } from 'date-fns'
-import { Plus, Archive } from 'lucide-react'
+import { Plus, Archive, Inbox } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { useCollection } from '@/hooks/useCollection'
 import { useAuth } from '@/hooks/useAuth'
 import { addItem, updateItem, archiveItem, deleteItem } from '@/lib/firestore'
-import { ALLOWED_EMAILS } from '@/firebase'
 import { Modal } from '@/components/Modal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import type { BoardItem, BoardCategory, BoardPriority, BoardStatus } from '@/types'
+import type { BoardItem, BoardCategory, BoardPriority, BoardStatus, UpdateSource } from '@/types'
 import * as T from '@/types'
 
 const COLUMNS: { status: BoardStatus; label: string }[] = [
-  { status: 'new', label: 'New / Needs Added' },
+  { status: 'inbox', label: 'Inbox / Needs Sorted' },
   { status: 'estimates', label: 'Estimates' },
   { status: 'repairs', label: 'Repairs' },
   { status: 'activeJobs', label: 'Active Jobs' },
@@ -32,13 +31,13 @@ export function Board() {
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [category, setCategory] = useState<BoardCategory>('other')
+  const [category, setCategory] = useState<BoardCategory>('note')
   const [priority, setPriority] = useState<BoardPriority>('normal')
-  const [status, setStatus] = useState<BoardStatus>('new')
-  const [assignedTo, setAssignedTo] = useState('')
+  const [source, setSource] = useState<UpdateSource>('charlene-note')
+  const [status, setStatus] = useState<BoardStatus>('inbox')
   const [dueDate, setDueDate] = useState('')
 
-  // Auto-open create modal when navigated with state.openCreate
+  // Auto-open create modal
   useEffect(() => {
     if ((location.state as any)?.openCreate) {
       setModalOpen(true)
@@ -54,7 +53,7 @@ export function Board() {
     'boardItems', constraints, [showArchived]
   )
 
-  // Migrate old statuses/categories on read
+  // Migrate old data on read
   const migratedItems = boardItems.map(item => ({
     ...item,
     status: T.migrateBoardStatus(item.status),
@@ -67,8 +66,9 @@ export function Board() {
 
   const openCreate = () => {
     setEditItem(null)
-    setTitle(''); setDescription(''); setCategory('other')
-    setPriority('normal'); setStatus('new'); setAssignedTo(''); setDueDate('')
+    setTitle(''); setDescription(''); setCategory('note')
+    setPriority('normal'); setSource('charlene-note')
+    setStatus('inbox'); setDueDate('')
     setModalOpen(true)
   }
 
@@ -78,8 +78,8 @@ export function Board() {
     setDescription(item.description)
     setCategory(T.migrateBoardCategory(item.category) as BoardCategory)
     setPriority(item.priority)
+    setSource((item as any).source || 'other')
     setStatus(T.migrateBoardStatus(item.status))
-    setAssignedTo(item.assignedTo || '')
     setDueDate(
       item.dueDate
         ? new Date(item.dueDate.toDate()).toISOString().split('T')[0]
@@ -88,7 +88,6 @@ export function Board() {
     setModalOpen(true)
   }
 
-  // Auto-set default status when category changes (new items only)
   const handleCategoryChange = (newCat: BoardCategory) => {
     setCategory(newCat)
     if (!editItem) {
@@ -99,8 +98,8 @@ export function Board() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     const data = {
-      title, description, category, priority, status,
-      assignedTo: assignedTo || null,
+      title, description, category, priority, status, source,
+      assignedTo: null,
       dueDate: dueDate
         ? Timestamp.fromDate(new Date(dueDate + 'T00:00:00'))
         : null,
@@ -121,7 +120,6 @@ export function Board() {
     await updateItem('boardItems', item.id, { status: newStatus })
   }
 
-  // Get adjacent columns for move buttons
   const getAdjacentStatuses = (currentStatus: BoardStatus) => {
     const idx = COLUMNS.findIndex(c => c.status === currentStatus)
     return {
@@ -142,7 +140,7 @@ export function Board() {
             <Archive size={16} />
           </button>
           <button className="btn btn-accent btn-sm" onClick={openCreate}>
-            <Plus size={18} /> Add
+            <Plus size={18} /> Capture Update
           </button>
         </div>
       </div>
@@ -177,34 +175,40 @@ export function Board() {
         {COLUMNS.map((col) => {
           const items = filteredItems.filter((i) => i.status === col.status)
           const { prev, next } = getAdjacentStatuses(col.status)
+          const isInbox = col.status === 'inbox'
           return (
             <div key={col.status} style={{ minWidth: 260, flex: '0 0 260px' }}>
               <div className="row row-between" style={{ marginBottom: 10 }}>
                 <h3 style={{
                   fontSize: 13, fontWeight: 700, margin: 0,
                   textTransform: 'uppercase', letterSpacing: '0.04em',
-                  color: 'var(--text-secondary)',
+                  color: isInbox ? 'var(--brand)' : 'var(--text-secondary)',
                 }}>
+                  {isInbox && <Inbox size={14} style={{ verticalAlign: -2, marginRight: 4 }} />}
                   {col.label}
                 </h3>
                 <span style={{
-                  fontSize: 13, fontWeight: 600, color: 'var(--muted)',
-                  background: 'var(--bg)', padding: '2px 8px', borderRadius: 999,
+                  fontSize: 13, fontWeight: 600,
+                  color: isInbox && items.length > 0 ? 'var(--brand)' : 'var(--muted)',
+                  background: isInbox && items.length > 0 ? '#FFF0EC' : 'var(--bg)',
+                  padding: '2px 8px', borderRadius: 999,
                 }}>
                   {items.length}
                 </span>
               </div>
 
               <div className="stack stack-sm" style={{
-                minHeight: 60, background: 'var(--bg)',
+                minHeight: 60,
+                background: isInbox ? '#FFF8F5' : 'var(--bg)',
                 borderRadius: 'var(--radius)', padding: 8,
+                border: isInbox && items.length > 0 ? '1.5px dashed var(--brand)' : 'none',
               }}>
                 {items.length === 0 ? (
                   <p style={{
                     textAlign: 'center', fontSize: 13,
                     color: 'var(--muted)', padding: 16,
                   }}>
-                    Empty
+                    {isInbox ? 'No unsorted items 👍' : 'Empty'}
                   </p>
                 ) : (
                   items.map((item) => (
@@ -233,12 +237,12 @@ export function Board() {
                           {item.description}
                         </p>
                       )}
-                      {item.assignedTo && (
+                      {(item as any).source && (item as any).source !== 'other' && (
                         <p style={{
-                          margin: '6px 0 0', fontSize: 12,
+                          margin: '4px 0 0', fontSize: 11, fontWeight: 500,
                           color: 'var(--text-secondary)',
                         }}>
-                          👤 {item.assignedTo}
+                          📥 {T.UPDATE_SOURCE_LABELS[(item as any).source as UpdateSource] || (item as any).source}
                         </p>
                       )}
                       {item.dueDate && (() => {
@@ -288,7 +292,7 @@ export function Board() {
       </div>
 
       {/* FAB */}
-      <button className="fab" onClick={openCreate} aria-label="Add board item">
+      <button className="fab" onClick={openCreate} aria-label="Capture update">
         <Plus size={24} />
       </button>
 
@@ -296,28 +300,39 @@ export function Board() {
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editItem ? 'Edit Item' : 'New Board Item'}
+        title={editItem ? 'Edit Item' : 'Capture Update'}
       >
         <form onSubmit={handleSubmit} className="stack stack-md">
           <div>
-            <label className="label">Title</label>
+            <label className="label">What happened?</label>
             <input
               className="input" value={title}
               onChange={(e) => setTitle(e.target.value)}
-              required placeholder="What needs to be done?"
+              required placeholder="e.g. Ryan texted — Smith roof needs flashing"
             />
           </div>
           <div>
-            <label className="label">Description</label>
+            <label className="label">Details / Notes</label>
             <textarea
               className="input textarea" value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Details (optional)"
+              placeholder="Any extra info from the text, photo, or call"
             />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label className="label">Category</label>
+              <label className="label">Source</label>
+              <select
+                className="input select" value={source}
+                onChange={(e) => setSource(e.target.value as UpdateSource)}
+              >
+                {Object.entries(T.UPDATE_SOURCE_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label">Type</label>
               <select
                 className="input select" value={category}
                 onChange={(e) => handleCategoryChange(e.target.value as BoardCategory)}
@@ -327,6 +342,8 @@ export function Board() {
                 ))}
               </select>
             </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label className="label">Column</label>
               <select
@@ -338,8 +355,6 @@ export function Board() {
                 ))}
               </select>
             </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label className="label">Priority</label>
               <select
@@ -350,22 +365,9 @@ export function Board() {
                 <option value="urgent">Urgent</option>
               </select>
             </div>
-            <div>
-              <label className="label">Assigned To</label>
-              <select
-                className="input select" value={assignedTo}
-                onChange={(e) => setAssignedTo(e.target.value)}
-              >
-                <option value="">Unassigned</option>
-                {ALLOWED_EMAILS.map((email: string) => {
-                  const name = email.split('@')[0].replace(/[.]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
-                  return <option key={email} value={name}>{name}</option>
-                })}
-              </select>
-            </div>
           </div>
           <div>
-            <label className="label">Due Date</label>
+            <label className="label">Due Date (optional)</label>
             <input
               className="input" type="date" value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
@@ -392,7 +394,7 @@ export function Board() {
               </button>
             )}
             <button type="submit" className="btn btn-primary">
-              {editItem ? 'Save' : 'Create'}
+              {editItem ? 'Save' : 'Capture'}
             </button>
           </div>
         </form>

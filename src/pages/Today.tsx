@@ -1,50 +1,36 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Timestamp, where, orderBy } from 'firebase/firestore'
-import { format, startOfDay, endOfDay, isToday } from 'date-fns'
-import { Plus, ClipboardList, Briefcase, Camera, AlertTriangle, CalendarDays, ChevronRight } from 'lucide-react'
+import { where, orderBy } from 'firebase/firestore'
+import { format, isToday } from 'date-fns'
+import { Inbox, Camera, AlertTriangle, Clock, CalendarDays, ChevronRight, ClipboardList, Briefcase, DollarSign } from 'lucide-react'
 import { useCollection } from '@/hooks/useCollection'
-import { EmptyState } from '@/components/EmptyState'
-import type { BoardItem, Job } from '@/types'
+import type { BoardItem, Job, Photo } from '@/types'
 import * as T from '@/types'
 
 export function Today() {
   const navigate = useNavigate()
   const today = new Date()
 
-  // Fetch active board items
   const { data: boardItems } = useCollection<BoardItem>('boardItems', [
     where('archivedAt', '==', null),
     orderBy('createdAt', 'desc'),
   ])
 
-  // Fetch active jobs
   const { data: jobs } = useCollection<Job>('jobs', [
     where('archivedAt', '==', null),
     orderBy('createdAt', 'desc'),
   ])
 
-  // Stats
-  const activeJobs = jobs.filter(j => !['paid', 'complete'].includes(j.status))
+  const { data: photos } = useCollection<Photo>('photos', [
+    orderBy('createdAt', 'desc'),
+  ])
+
+  // --- Charlene's Control Panel Stats ---
+  const inboxItems = boardItems.filter(b => T.migrateBoardStatus(b.status) === 'inbox')
   const urgentItems = boardItems.filter(b => b.priority === 'urgent' && T.migrateBoardStatus(b.status) !== 'completed')
-  const newItems = boardItems.filter(b => T.migrateBoardStatus(b.status) === 'new')
-
-  // Today's items (due today or urgent)
-  const todayItems = boardItems.filter(b => {
-    if (T.migrateBoardStatus(b.status) === 'completed') return false
-    if (b.priority === 'urgent') return true
-    if (b.dueDate) {
-      const due = b.dueDate.toDate()
-      return isToday(due)
-    }
-    return false
-  })
-
-  // Upcoming scheduled jobs
-  const upcomingJobs = jobs
-    .filter(j => j.scheduledDate && ['scheduled', 'approved'].includes(j.status))
-    .sort((a, b) => (a.scheduledDate?.toMillis() || 0) - (b.scheduledDate?.toMillis() || 0))
-    .slice(0, 5)
+  const unprocessedPhotos = photos.filter(p => (p as any).source === 'ryan-whiteboard' && !(p as any).processed)
+  const waitingJobs = jobs.filter(j => ['lead', 'estimate-sent', 'approved'].includes(j.status))
+  const needsInvoice = jobs.filter(j => j.status === 'complete' && !j.invoiceAmount)
+  const activeJobs = jobs.filter(j => !['paid', 'complete', 'invoiced'].includes(j.status))
 
   return (
     <div className="stack stack-lg">
@@ -58,13 +44,17 @@ export function Today() {
 
       {/* Stats row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-        <div className="stat-card" onClick={() => navigate('/jobs')} style={{ cursor: 'pointer' }}>
-          <div className="stat-value">{activeJobs.length}</div>
-          <div className="stat-label">Active Jobs</div>
-        </div>
         <div className="stat-card" onClick={() => navigate('/board')} style={{ cursor: 'pointer' }}>
-          <div className="stat-value">{newItems.length}</div>
-          <div className="stat-label">New</div>
+          <div className="stat-value" style={{ color: inboxItems.length > 0 ? 'var(--brand)' : undefined }}>
+            {inboxItems.length}
+          </div>
+          <div className="stat-label">Needs Sorted</div>
+        </div>
+        <div className="stat-card" onClick={() => navigate('/photos')} style={{ cursor: 'pointer' }}>
+          <div className="stat-value" style={{ color: unprocessedPhotos.length > 0 ? 'var(--warning)' : undefined }}>
+            {unprocessedPhotos.length}
+          </div>
+          <div className="stat-label">Unprocessed</div>
         </div>
         <div className="stat-card" onClick={() => navigate('/board')} style={{ cursor: 'pointer' }}>
           <div className="stat-value" style={{ color: urgentItems.length > 0 ? 'var(--danger)' : undefined }}>
@@ -77,31 +67,52 @@ export function Today() {
       {/* Quick actions */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
         <button className="btn btn-outline btn-sm" style={{ flexDirection: 'column', padding: '14px 8px', height: 'auto', minHeight: 'auto' }} onClick={() => navigate('/board', { state: { openCreate: true } })}>
-          <ClipboardList size={20} />
-          <span style={{ fontSize: 12 }}>Board Item</span>
+          <Inbox size={20} />
+          <span style={{ fontSize: 12 }}>Capture Update</span>
+        </button>
+        <button className="btn btn-outline btn-sm" style={{ flexDirection: 'column', padding: '14px 8px', height: 'auto', minHeight: 'auto' }} onClick={() => navigate('/photos', { state: { openCreate: true } })}>
+          <Camera size={20} />
+          <span style={{ fontSize: 12 }}>Whiteboard Photo</span>
         </button>
         <button className="btn btn-outline btn-sm" style={{ flexDirection: 'column', padding: '14px 8px', height: 'auto', minHeight: 'auto' }} onClick={() => navigate('/jobs', { state: { openCreate: true } })}>
           <Briefcase size={20} />
           <span style={{ fontSize: 12 }}>New Job</span>
         </button>
-        <button className="btn btn-outline btn-sm" style={{ flexDirection: 'column', padding: '14px 8px', height: 'auto', minHeight: 'auto' }} onClick={() => navigate('/photos', { state: { openCreate: true } })}>
-          <Camera size={20} />
-          <span style={{ fontSize: 12 }}>Photo</span>
-        </button>
       </div>
 
-      {/* Today's items */}
-      <div>
-        <h2 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 12px' }}>
-          {todayItems.length > 0 ? "Needs Attention" : "All Clear"} 👋
-        </h2>
-        {todayItems.length === 0 ? (
-          <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--muted)' }}>
-            <p style={{ margin: 0, fontSize: 15 }}>Nothing urgent today. Nice!</p>
-          </div>
-        ) : (
+      {/* Unprocessed whiteboard photos */}
+      {unprocessedPhotos.length > 0 && (
+        <div>
+          <h2 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 12px' }}>
+            <Camera size={18} style={{ verticalAlign: -3, marginRight: 6, color: 'var(--warning)' }} />
+            Unprocessed Whiteboard Photos
+          </h2>
           <div className="stack stack-sm">
-            {todayItems.map((item) => (
+            {unprocessedPhotos.slice(0, 5).map((photo) => (
+              <div key={photo.id} className="card card-pressable" onClick={() => navigate('/photos')} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <img src={photo.url} alt={photo.caption} style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{photo.caption || 'Whiteboard Photo'}</p>
+                  <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+                    {format(photo.createdAt.toDate(), 'MMM d, h:mm a')} — Needs processed
+                  </p>
+                </div>
+                <ChevronRight size={16} style={{ color: 'var(--muted)', flexShrink: 0 }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Inbox items */}
+      {inboxItems.length > 0 && (
+        <div>
+          <h2 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 12px' }}>
+            <Inbox size={18} style={{ verticalAlign: -3, marginRight: 6, color: 'var(--brand)' }} />
+            Inbox / Needs Sorted
+          </h2>
+          <div className="stack stack-sm">
+            {inboxItems.slice(0, 8).map((item) => (
               <div key={item.id} className="card card-pressable" onClick={() => navigate('/board')}>
                 <div className="row row-between gap-sm">
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -114,9 +125,9 @@ export function Today() {
                       )}
                     </div>
                     <p style={{ margin: 0, fontWeight: 600, fontSize: 15 }}>{item.title}</p>
-                    {item.assignedTo && (
-                      <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--muted)' }}>
-                        Assigned to {item.assignedTo}
+                    {(item as any).source && (item as any).source !== 'other' && (
+                      <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+                        📥 {T.UPDATE_SOURCE_LABELS[(item as any).source as T.UpdateSource] || ''}
                       </p>
                     )}
                   </div>
@@ -125,18 +136,44 @@ export function Today() {
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Upcoming jobs */}
-      {upcomingJobs.length > 0 && (
+      {/* Urgent items (not in inbox) */}
+      {urgentItems.filter(b => T.migrateBoardStatus(b.status) !== 'inbox').length > 0 && (
         <div>
           <h2 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 12px' }}>
-            <CalendarDays size={18} style={{ verticalAlign: -3, marginRight: 6 }} />
-            Upcoming Jobs
+            <AlertTriangle size={18} style={{ verticalAlign: -3, marginRight: 6, color: 'var(--danger)' }} />
+            Urgent
           </h2>
           <div className="stack stack-sm">
-            {upcomingJobs.map((job) => (
+            {urgentItems.filter(b => T.migrateBoardStatus(b.status) !== 'inbox').slice(0, 5).map((item) => (
+              <div key={item.id} className="card card-pressable" onClick={() => navigate('/board')}>
+                <div className="row row-between gap-sm">
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span className="badge badge-urgent" style={{ marginBottom: 4, display: 'inline-block' }}>Urgent</span>
+                    <p style={{ margin: 0, fontWeight: 600, fontSize: 15 }}>{item.title}</p>
+                    <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+                      {T.BOARD_STATUS_LABELS[T.migrateBoardStatus(item.status)] || item.status}
+                    </p>
+                  </div>
+                  <ChevronRight size={18} style={{ color: 'var(--muted)', flexShrink: 0 }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Jobs waiting / needing action */}
+      {(waitingJobs.length > 0 || needsInvoice.length > 0) && (
+        <div>
+          <h2 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 12px' }}>
+            <Clock size={18} style={{ verticalAlign: -3, marginRight: 6 }} />
+            Jobs Needing Action
+          </h2>
+          <div className="stack stack-sm">
+            {waitingJobs.slice(0, 5).map((job) => (
               <div key={job.id} className="card card-pressable" onClick={() => navigate(`/jobs/${job.id}`)}>
                 <div className="row row-between gap-sm">
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -144,11 +181,6 @@ export function Today() {
                     <p className="truncate" style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
                       {job.address}
                     </p>
-                    {job.scheduledDate && (
-                      <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--info)', fontWeight: 500 }}>
-                        📅 {format(job.scheduledDate.toDate(), 'EEE, MMM d')}
-                      </p>
-                    )}
                   </div>
                   <span className={`badge ${T.JOB_STATUS_COLORS[job.status]}`}>
                     {T.JOB_STATUS_LABELS[job.status]}
@@ -156,7 +188,28 @@ export function Today() {
                 </div>
               </div>
             ))}
+            {needsInvoice.map((job) => (
+              <div key={job.id} className="card card-pressable" onClick={() => navigate(`/jobs/${job.id}`)}>
+                <div className="row row-between gap-sm">
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: '0 0 2px', fontWeight: 600, fontSize: 15 }}>{job.customerName}</p>
+                    <p style={{ margin: 0, fontSize: 13, color: 'var(--warning)', fontWeight: 500 }}>
+                      <DollarSign size={13} style={{ verticalAlign: -2 }} /> Needs invoice
+                    </p>
+                  </div>
+                  <span className="badge bg-green-100 text-green-700">Complete</span>
+                </div>
+              </div>
+            ))}
           </div>
+        </div>
+      )}
+
+      {/* All clear message */}
+      {inboxItems.length === 0 && urgentItems.length === 0 && unprocessedPhotos.length === 0 && waitingJobs.length === 0 && needsInvoice.length === 0 && (
+        <div className="card" style={{ textAlign: 'center', padding: 32, color: 'var(--muted)' }}>
+          <p style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>All caught up! 👍</p>
+          <p style={{ margin: '6px 0 0', fontSize: 14 }}>No lost info. Board is organized.</p>
         </div>
       )}
     </div>

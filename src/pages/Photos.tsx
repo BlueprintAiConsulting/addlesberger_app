@@ -1,17 +1,19 @@
 import { useState, useEffect, useRef, FormEvent } from 'react'
 import { orderBy } from 'firebase/firestore'
+import { format } from 'date-fns'
 import { useLocation } from 'react-router-dom'
-import { Camera, Upload, X, Image as ImageIcon, Tag, Trash2 } from 'lucide-react'
+import { Camera, CheckCircle, Image as ImageIcon, Trash2 } from 'lucide-react'
 import { useCollection } from '@/hooks/useCollection'
 import { useAuth } from '@/hooks/useAuth'
-import { addItem, deleteItem } from '@/lib/firestore'
+import { addItem, updateItem, deleteItem } from '@/lib/firestore'
 import { uploadPhoto, deletePhoto } from '@/lib/storage'
 import { Modal } from '@/components/Modal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { EmptyState } from '@/components/EmptyState'
-import type { Photo, Job } from '@/types'
+import type { Photo, Job, BoardItem, PhotoSource } from '@/types'
+import * as T from '@/types'
 
-const TAG_OPTIONS = ['before', 'after', 'damage', 'progress', 'complete', 'whiteboard', 'material']
+const PHOTO_SOURCES: PhotoSource[] = ['ryan-whiteboard', 'jobsite', 'before', 'after', 'damage', 'material', 'other']
 
 export function Photos() {
   const { user } = useAuth()
@@ -20,9 +22,9 @@ export function Photos() {
   const [uploading, setUploading] = useState(false)
   const [viewPhoto, setViewPhoto] = useState<Photo | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Photo | null>(null)
-  const [filterTag, setFilterTag] = useState<string>('all')
+  const [filterSource, setFilterSource] = useState<string>('all')
+  const [filterProcessed, setFilterProcessed] = useState<string>('all')
 
-  // Auto-open file picker when navigated with state.openCreate (from Today quick add)
   useEffect(() => {
     if ((location.state as any)?.openCreate) {
       setTimeout(() => fileRef.current?.click(), 300)
@@ -30,9 +32,9 @@ export function Photos() {
     }
   }, [location.state])
 
-  // Upload form
+  // Upload form state
   const [caption, setCaption] = useState('')
-  const [tags, setTags] = useState<string[]>([])
+  const [photoSource, setPhotoSource] = useState<PhotoSource>('ryan-whiteboard')
   const [photoJobId, setPhotoJobId] = useState<string | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -40,19 +42,23 @@ export function Photos() {
 
   const { data: photos } = useCollection<Photo>('photos', [orderBy('createdAt', 'desc')])
   const { data: jobs } = useCollection<Job>('jobs', [orderBy('createdAt', 'desc')])
+  const { data: boardItems } = useCollection<BoardItem>('boardItems', [orderBy('createdAt', 'desc')])
 
-  const filtered = filterTag === 'all' ? photos : photos.filter(p => p.tags.includes(filterTag))
+  // Filter logic
+  let filtered = photos
+  if (filterSource !== 'all') filtered = filtered.filter(p => (p as any).source === filterSource)
+  if (filterProcessed === 'unprocessed') filtered = filtered.filter(p => !(p as any).processed)
+  if (filterProcessed === 'processed') filtered = filtered.filter(p => (p as any).processed)
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     setSelectedFile(file)
     setPreviewUrl(URL.createObjectURL(file))
+    setPhotoSource('ryan-whiteboard')
+    setCaption('')
+    setPhotoJobId(null)
     setUploadModalOpen(true)
-  }
-
-  const toggleTag = (tag: string) => {
-    setTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
   }
 
   const handleUpload = async (e: FormEvent) => {
@@ -62,17 +68,33 @@ export function Photos() {
     try {
       const { url, fileName } = await uploadPhoto(selectedFile)
       await addItem('photos', {
-        url, fileName, caption, tags,
-        thumbnailUrl: null, jobId: photoJobId,
+        url, fileName, caption,
+        tags: [photoSource],
+        source: photoSource,
+        processed: false,
+        boardItemId: null,
+        thumbnailUrl: null,
+        jobId: photoJobId,
         uploadedBy: user?.uid || '',
       })
       setUploadModalOpen(false)
-      setCaption(''); setTags([]); setPhotoJobId(null); setSelectedFile(null); setPreviewUrl(null)
+      setCaption(''); setPhotoSource('ryan-whiteboard'); setPhotoJobId(null)
+      setSelectedFile(null); setPreviewUrl(null)
     } catch (err) {
       console.error('Upload failed:', err)
       alert('Upload failed. Please try again.')
     }
     setUploading(false)
+  }
+
+  const markProcessed = async (photo: Photo) => {
+    await updateItem('photos', photo.id, { processed: true })
+    setViewPhoto(null)
+  }
+
+  const markUnprocessed = async (photo: Photo) => {
+    await updateItem('photos', photo.id, { processed: false })
+    setViewPhoto(null)
   }
 
   return (
@@ -85,38 +107,62 @@ export function Photos() {
         <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFileSelect} />
       </div>
 
-      {/* Tag filter */}
-      <div className="filter-tabs">
-        <button className={`filter-tab ${filterTag === 'all' ? 'active' : ''}`} onClick={() => setFilterTag('all')}>All</button>
-        {TAG_OPTIONS.map(tag => (
-          <button key={tag} className={`filter-tab ${filterTag === tag ? 'active' : ''}`} onClick={() => setFilterTag(tag)}>
-            {tag.charAt(0).toUpperCase() + tag.slice(1)}
-          </button>
-        ))}
+      {/* Filters */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div className="filter-tabs" style={{ flex: 1 }}>
+          <button className={`filter-tab ${filterSource === 'all' ? 'active' : ''}`} onClick={() => setFilterSource('all')}>All</button>
+          <button className={`filter-tab ${filterSource === 'ryan-whiteboard' ? 'active' : ''}`} onClick={() => setFilterSource('ryan-whiteboard')}>Whiteboard</button>
+          <button className={`filter-tab ${filterSource === 'jobsite' ? 'active' : ''}`} onClick={() => setFilterSource('jobsite')}>Jobsite</button>
+          <button className={`filter-tab ${filterSource === 'damage' ? 'active' : ''}`} onClick={() => setFilterSource('damage')}>Damage</button>
+        </div>
+        <select
+          className="input select"
+          style={{ width: 'auto', fontSize: 13, padding: '6px 10px', minHeight: 'auto' }}
+          value={filterProcessed}
+          onChange={e => setFilterProcessed(e.target.value)}
+        >
+          <option value="all">All Status</option>
+          <option value="unprocessed">Needs Processed</option>
+          <option value="processed">Processed ✓</option>
+        </select>
       </div>
 
       {/* Photo grid */}
       {filtered.length === 0 ? (
-        <EmptyState icon={<ImageIcon />} message="No photos yet" action={<button className="btn btn-primary btn-sm" onClick={() => fileRef.current?.click()}>Take a Photo</button>} />
+        <EmptyState icon={<ImageIcon />} message="No photos yet" action={<button className="btn btn-primary btn-sm" onClick={() => fileRef.current?.click()}>Upload Photo</button>} />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 8 }}>
-          {filtered.map(photo => (
-            <div key={photo.id} onClick={() => setViewPhoto(photo)} style={{
-              cursor: 'pointer', borderRadius: 'var(--radius-sm)', overflow: 'hidden',
-              aspectRatio: '1', position: 'relative', background: '#E2E8F0',
-            }}>
-              <img src={photo.url} alt={photo.caption} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              {photo.tags.length > 0 && (
-                <div style={{ position: 'absolute', bottom: 4, left: 4, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                  {photo.tags.slice(0, 2).map(tag => (
-                    <span key={tag} style={{ fontSize: 10, fontWeight: 600, background: 'rgba(0,0,0,0.6)', color: 'white', padding: '2px 6px', borderRadius: 4 }}>
-                      {tag}
+          {filtered.map(photo => {
+            const isWhiteboard = (photo as any).source === 'ryan-whiteboard'
+            const isProcessed = (photo as any).processed
+            return (
+              <div key={photo.id} onClick={() => setViewPhoto(photo)} style={{
+                cursor: 'pointer', borderRadius: 'var(--radius-sm)', overflow: 'hidden',
+                aspectRatio: '1', position: 'relative', background: '#E2E8F0',
+                border: isWhiteboard && !isProcessed ? '2px solid var(--warning)' : 'none',
+              }}>
+                <img src={photo.url} alt={photo.caption} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                {/* Status badges */}
+                <div style={{ position: 'absolute', top: 4, right: 4, display: 'flex', gap: 4 }}>
+                  {isProcessed && (
+                    <span style={{ fontSize: 10, fontWeight: 700, background: 'rgba(34,197,94,0.9)', color: 'white', padding: '2px 6px', borderRadius: 4 }}>
+                      ✓
                     </span>
-                  ))}
+                  )}
+                  {isWhiteboard && !isProcessed && (
+                    <span style={{ fontSize: 10, fontWeight: 700, background: 'rgba(245,158,11,0.9)', color: 'white', padding: '2px 6px', borderRadius: 4 }}>
+                      Needs Processed
+                    </span>
+                  )}
                 </div>
-              )}
-            </div>
-          ))}
+                <div style={{ position: 'absolute', bottom: 4, left: 4, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 10, fontWeight: 600, background: 'rgba(0,0,0,0.6)', color: 'white', padding: '2px 6px', borderRadius: 4 }}>
+                    {T.PHOTO_SOURCE_LABELS[(photo as any).source as PhotoSource] || (photo as any).source || 'Photo'}
+                  </span>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 
@@ -128,28 +174,28 @@ export function Photos() {
           {previewUrl && (
             <img src={previewUrl} alt="Preview" style={{ width: '100%', maxHeight: 240, objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
           )}
-          <div><label className="label">Caption</label><input className="input" value={caption} onChange={e => setCaption(e.target.value)} placeholder="Describe this photo" /></div>
           <div>
-            <label className="label">Tags</label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {TAG_OPTIONS.map(tag => (
-                <button key={tag} type="button"
-                  className={`filter-tab ${tags.includes(tag) ? 'active' : ''}`}
-                  style={{ fontSize: 12, padding: '4px 10px' }}
-                  onClick={() => toggleTag(tag)}>
-                  {tag}
-                </button>
-              ))}
-            </div>
+            <label className="label">Caption / Notes</label>
+            <input className="input" value={caption} onChange={e => setCaption(e.target.value)} placeholder="What's in this photo?" />
           </div>
-          <div>
-            <label className="label">Link to Job (optional)</label>
-            <select className="input select" value={photoJobId || ''} onChange={e => setPhotoJobId(e.target.value || null)}>
-              <option value="">No job linked</option>
-              {jobs.filter(j => !j.archivedAt).map(j => (
-                <option key={j.id} value={j.id}>{j.customerName} — {j.address}</option>
-              ))}
-            </select>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label className="label">Source</label>
+              <select className="input select" value={photoSource} onChange={e => setPhotoSource(e.target.value as PhotoSource)}>
+                {PHOTO_SOURCES.map(s => (
+                  <option key={s} value={s}>{T.PHOTO_SOURCE_LABELS[s]}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label">Link to Job</label>
+              <select className="input select" value={photoJobId || ''} onChange={e => setPhotoJobId(e.target.value || null)}>
+                <option value="">None</option>
+                {jobs.filter(j => !j.archivedAt).map(j => (
+                  <option key={j.id} value={j.id}>{j.customerName} — {j.address}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <button type="submit" className="btn btn-primary btn-full" disabled={uploading}>
             {uploading ? 'Uploading...' : 'Save Photo'}
@@ -163,20 +209,40 @@ export function Photos() {
           <div className="stack stack-md">
             <img src={viewPhoto.url} alt={viewPhoto.caption} style={{ width: '100%', borderRadius: 'var(--radius-sm)' }} />
             {viewPhoto.caption && <p style={{ margin: 0, fontSize: 15 }}>{viewPhoto.caption}</p>}
-            {viewPhoto.tags.length > 0 && (
-              <div className="row gap-sm" style={{ flexWrap: 'wrap' }}>
-                {viewPhoto.tags.map(tag => (
-                  <span key={tag} className="badge" style={{ background: 'var(--bg)' }}>{tag}</span>
-                ))}
-              </div>
-            )}
-            <button
-              className="btn btn-danger btn-sm"
-              style={{ marginTop: 8 }}
-              onClick={() => { setViewPhoto(null); setDeleteTarget(viewPhoto) }}
-            >
-              <Trash2 size={16} /> Delete Photo
-            </button>
+
+            <div className="row gap-sm" style={{ flexWrap: 'wrap' }}>
+              <span className="badge" style={{ background: 'var(--bg)' }}>
+                {T.PHOTO_SOURCE_LABELS[(viewPhoto as any).source as PhotoSource] || 'Photo'}
+              </span>
+              <span className="badge" style={{
+                background: (viewPhoto as any).processed ? '#DCFCE7' : '#FEF3C7',
+                color: (viewPhoto as any).processed ? '#166534' : '#92400E',
+              }}>
+                {(viewPhoto as any).processed ? '✓ Processed' : 'Needs Processed'}
+              </span>
+            </div>
+
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
+              Uploaded {format(viewPhoto.createdAt.toDate(), 'MMM d, yyyy h:mm a')}
+            </p>
+
+            <div className="row gap-sm" style={{ flexWrap: 'wrap' }}>
+              {!(viewPhoto as any).processed ? (
+                <button className="btn btn-primary btn-sm" onClick={() => markProcessed(viewPhoto)}>
+                  <CheckCircle size={16} /> Mark Processed
+                </button>
+              ) : (
+                <button className="btn btn-outline btn-sm" onClick={() => markUnprocessed(viewPhoto)}>
+                  Undo Processed
+                </button>
+              )}
+              <button
+                className="btn btn-danger btn-sm"
+                onClick={() => { setViewPhoto(null); setDeleteTarget(viewPhoto) }}
+              >
+                <Trash2 size={16} /> Delete
+              </button>
+            </div>
           </div>
         )}
       </Modal>

@@ -1,11 +1,11 @@
 import { ReactNode } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { LayoutDashboard, ClipboardList, Briefcase, FileText, Camera, Settings, LogOut } from 'lucide-react'
+import { LayoutDashboard, Inbox, Briefcase, FileText, Camera, Settings, LogOut } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Today' },
-  { to: '/board', icon: ClipboardList, label: 'Board' },
+  { to: '/board', icon: Inbox, label: 'Board' },
   { to: '/jobs', icon: Briefcase, label: 'Jobs' },
   { to: '/estimates', icon: FileText, label: 'Estimates' },
   { to: '/photos', icon: Camera, label: 'Photos' },
