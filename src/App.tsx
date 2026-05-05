@@ -1,16 +1,25 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Suspense, lazy } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { ALLOWED_EMAILS } from '@/firebase'
 import { Shell } from '@/components/Shell'
 import { Login } from '@/pages/Login'
-import { Today } from '@/pages/Today'
-import { Board } from '@/pages/Board'
-import { Jobs } from '@/pages/Jobs'
-import { JobDetail } from '@/pages/JobDetail'
-import { Estimates } from '@/pages/Estimates'
-import { Invoices } from '@/pages/Invoices'
-import { Photos } from '@/pages/Photos'
-import { Settings } from '@/pages/Settings'
+
+// Lazy-load all route pages — only downloads when navigated to
+const Today = lazy(() => import('@/pages/Today').then(m => ({ default: m.Today })))
+const Board = lazy(() => import('@/pages/Board').then(m => ({ default: m.Board })))
+const Jobs = lazy(() => import('@/pages/Jobs').then(m => ({ default: m.Jobs })))
+const JobDetail = lazy(() => import('@/pages/JobDetail').then(m => ({ default: m.JobDetail })))
+const Estimates = lazy(() => import('@/pages/Estimates').then(m => ({ default: m.Estimates })))
+const Invoices = lazy(() => import('@/pages/Invoices').then(m => ({ default: m.Invoices })))
+const Photos = lazy(() => import('@/pages/Photos').then(m => ({ default: m.Photos })))
+const Settings = lazy(() => import('@/pages/Settings').then(m => ({ default: m.Settings })))
+
+const PageLoader = () => (
+  <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
+    <div className="spinner" />
+  </div>
+)
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth()
@@ -68,6 +77,7 @@ export default function App() {
     <BrowserRouter basename="/addlesberger_app">
       <AuthGate>
         <Shell>
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<Today />} />
             <Route path="/board" element={<Board />} />
@@ -79,6 +89,7 @@ export default function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </Suspense>
         </Shell>
       </AuthGate>
     </BrowserRouter>

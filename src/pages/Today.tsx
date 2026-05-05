@@ -17,19 +17,21 @@ export function Today() {
   const navigate = useNavigate()
   const today = new Date()
 
-  const { data: boardItems } = useCollection<BoardItem>('boardItems', [
+  const { data: boardItems, loading: loadingBoard } = useCollection<BoardItem>('boardItems', [
     where('archivedAt', '==', null),
     orderBy('createdAt', 'desc'),
   ])
 
-  const { data: jobs } = useCollection<Job>('jobs', [
+  const { data: jobs, loading: loadingJobs } = useCollection<Job>('jobs', [
     where('archivedAt', '==', null),
     orderBy('createdAt', 'desc'),
   ])
 
-  const { data: photos } = useCollection<Photo>('photos', [
+  const { data: photos, loading: loadingPhotos } = useCollection<Photo>('photos', [
     orderBy('createdAt', 'desc'),
   ])
+
+  const isLoading = loadingBoard || loadingJobs || loadingPhotos
 
   const inboxItems = boardItems.filter(b => T.migrateBoardStatus(b.status) === 'inbox')
   const urgentItems = boardItems.filter(b => b.priority === 'urgent' && T.migrateBoardStatus(b.status) !== 'completed')
@@ -51,6 +53,11 @@ export function Today() {
       </div>
 
       {/* Stats — 3 columns */}
+      {isLoading ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+          {[1,2,3].map(i => <div key={i} className="skeleton skeleton-card" style={{ height: 68 }} />)}
+        </div>
+      ) : (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
         <div className="stat-card" onClick={() => navigate('/board')}>
           <div className="stat-value" style={{ color: inboxItems.length > 0 ? 'var(--brand)' : undefined }}>
@@ -71,6 +78,7 @@ export function Today() {
           <div className="stat-label">Urgent</div>
         </div>
       </div>
+      )}
 
       {/* Quick Actions */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
