@@ -165,19 +165,18 @@ export function Board() {
       </div>
 
       {/* Board columns — horizontal scroll on mobile */}
-      <div style={{
+      <div className="board-scroll" style={{
         display: 'flex',
         gap: 12,
         overflowX: 'auto',
         paddingBottom: 8,
-        WebkitOverflowScrolling: 'touch',
       }}>
         {COLUMNS.map((col) => {
           const items = filteredItems.filter((i) => i.status === col.status)
           const { prev, next } = getAdjacentStatuses(col.status)
           const isInbox = col.status === 'inbox'
           return (
-            <div key={col.status} style={{ minWidth: 260, flex: '0 0 260px' }}>
+            <div key={col.status} className="board-col" style={{ minWidth: 260, flex: '0 0 260px' }}>
               <div className="row row-between" style={{ marginBottom: 10 }}>
                 <h3 style={{
                   fontSize: 13, fontWeight: 700, margin: 0,
