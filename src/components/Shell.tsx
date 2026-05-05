@@ -23,10 +23,10 @@ export function Shell({ children }: { children: ReactNode }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 34, height: 34, borderRadius: 10,
-            background: 'linear-gradient(135deg, #D35400, #E67E22)',
+            background: 'linear-gradient(135deg, #C7330A, #D94420)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 13, fontWeight: 800, color: '#fff',
-            boxShadow: '0 2px 8px rgba(211,84,0,.3)',
+            boxShadow: '0 2px 8px rgba(199,51,10,.3)',
           }}>RL</div>
           <div>
             <h1 style={{ fontSize: 15, fontWeight: 600, margin: 0, lineHeight: 1.2 }}>R. L. Addlesberger</h1>

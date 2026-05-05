@@ -41,10 +41,10 @@ export function Login() {
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{
             width: 56, height: 56, borderRadius: 14,
-            background: 'linear-gradient(135deg, #D35400, #E67E22)',
+            background: 'linear-gradient(135deg, #C7330A, #D94420)',
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             marginBottom: 16, fontSize: 22, fontWeight: 800, color: '#fff',
-            boxShadow: '0 4px 16px rgba(211,84,0,.25)',
+            boxShadow: '0 4px 16px rgba(199,51,10,.25)',
           }}>RL</div>
           <h1 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 2px', color: '#202124' }}>
             R. L. Addlesberger

@@ -4,11 +4,11 @@
    DESIGN TOKENS — Premium, warm, Google Keep-inspired
    ═══════════════════════════════════════════════════════════ */
 :root {
-  --brand: #D35400;
-  --brand-light: #E67E22;
-  --brand-dark: #A04000;
-  --brand-glow: rgba(211,84,0,0.12);
-  --brand-subtle: #FFF8F3;
+  --brand: #C7330A;
+  --brand-light: #D94420;
+  --brand-dark: #9E2808;
+  --brand-glow: rgba(199,51,10,0.12);
+  --brand-subtle: #FFF5F2;
 
   --surface: #FFFFFF;
   --surface-raised: #FFFFFF;
@@ -42,7 +42,7 @@
   --shadow: 0 2px 6px rgba(0,0,0,.06), 0 0 0 1px rgba(0,0,0,.03);
   --shadow-md: 0 4px 12px rgba(0,0,0,.08), 0 0 0 1px rgba(0,0,0,.02);
   --shadow-lg: 0 8px 24px rgba(0,0,0,.1), 0 0 0 1px rgba(0,0,0,.02);
-  --shadow-glow: 0 4px 20px rgba(211,84,0,.2);
+  --shadow-glow: 0 4px 20px rgba(199,51,10,.2);
 
   --nav-height: 64px;
   --bottom-nav-height: 64px;
@@ -114,8 +114,8 @@ img{content-visibility:auto}
 /* ═══ Buttons ════════════════════════════════════════════ */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 20px;min-height:44px;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:all var(--dur) var(--ease);text-decoration:none;white-space:nowrap}
 .btn:active{transform:scale(.96)}
-.btn-primary{background:var(--brand);color:#fff;box-shadow:0 1px 4px rgba(211,84,0,.2)}
-.btn-primary:hover{background:var(--brand-light);box-shadow:0 2px 8px rgba(211,84,0,.25)}
+.btn-primary{background:var(--brand);color:#fff;box-shadow:0 1px 4px rgba(199,51,10,.2)}
+.btn-primary:hover{background:var(--brand-light);box-shadow:0 2px 8px rgba(199,51,10,.25)}
 .btn-accent{background:var(--brand);color:#fff}
 .btn-accent:hover{background:var(--brand-light)}
 .btn-outline{background:var(--surface);color:var(--text-secondary);border:1.5px solid var(--border)}
@@ -130,7 +130,7 @@ img{content-visibility:auto}
 
 /* ═══ FAB ════════════════════════════════════════════════ */
 .fab{position:fixed;bottom:calc(var(--bottom-nav-height) + 16px);right:16px;z-index:45;width:56px;height:56px;border-radius:16px;background:var(--brand);color:#fff;border:none;box-shadow:var(--shadow-lg),var(--shadow-glow);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .25s var(--ease-bounce)}
-.fab:hover{transform:scale(1.05);box-shadow:var(--shadow-lg),0 6px 24px rgba(211,84,0,.3)}
+.fab:hover{transform:scale(1.05);box-shadow:var(--shadow-lg),0 6px 24px rgba(199,51,10,.3)}
 .fab:active{transform:scale(.93)}
 @media(min-width:768px){.fab{bottom:28px;right:28px}}
 
