@@ -1,7 +1,9 @@
 import { useState, FormEvent, useRef } from 'react'
 import { orderBy, Timestamp } from 'firebase/firestore'
 import { format } from 'date-fns'
-import { Plus, FileText, Copy, Trash2, Printer, Eye, ArrowLeft } from 'lucide-react'
+import { Plus, FileText, Copy, Trash2, Printer, Eye, ArrowLeft, Download, Mail } from 'lucide-react'
+import { downloadInvoicePDF, emailInvoice } from '@/lib/invoicePdf'
+import type { InvoiceData } from '@/lib/invoicePdf'
 import { useCollection } from '@/hooks/useCollection'
 import { useAuth } from '@/hooks/useAuth'
 import { addItem, updateItem, deleteItem } from '@/lib/firestore'
@@ -194,17 +196,38 @@ export function Invoices() {
     setTimeout(() => win.print(), 300)
   }
 
+  const buildInvoiceData = (inv: Invoice): InvoiceData => ({
+    clientName: inv.clientName,
+    clientAddress: inv.clientAddress,
+    invoiceDate: inv.invoiceDate ? format(inv.invoiceDate.toDate(), 'MMMM d, yyyy') : '',
+    servicesPerformedText: inv.servicesPerformedText,
+    warrantyText: inv.warrantyText,
+    total: inv.total || 0,
+    paymentStatus: inv.paymentStatus,
+    paymentStatusLabel: T.INVOICE_PAYMENT_STATUS_LABELS[inv.paymentStatus],
+    paymentInstructions: inv.paymentInstructions,
+    thankYouText: inv.thankYouText,
+    licenseText: inv.licenseText,
+  })
+
   // --- Preview mode ---
   if (previewInvoice) {
     const inv = previewInvoice
+    const invData = buildInvoiceData(inv)
     return (
       <div className="stack stack-lg">
-        <div className="row gap-sm">
+        <div className="row gap-sm" style={{ flexWrap: 'wrap' }}>
           <button className="btn btn-ghost btn-sm" onClick={() => setPreviewInvoice(null)}>
             <ArrowLeft size={16} /> Back
           </button>
-          <button className="btn btn-primary btn-sm" onClick={handlePrint}>
+          <button className="btn btn-outline btn-sm" onClick={handlePrint}>
             <Printer size={16} /> Print
+          </button>
+          <button className="btn btn-primary btn-sm" onClick={() => downloadInvoicePDF(invData)}>
+            <Download size={16} /> Save as PDF
+          </button>
+          <button className="btn btn-outline btn-sm" onClick={() => emailInvoice(invData)}>
+            <Mail size={16} /> Email Invoice
           </button>
         </div>
         <div ref={printRef} style={{
