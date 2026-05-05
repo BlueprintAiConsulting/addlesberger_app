@@ -64,7 +64,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/addlesberger_app">
       <AuthGate>
         <Shell>
           <Routes>
