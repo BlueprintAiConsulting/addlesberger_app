@@ -5,7 +5,7 @@ service firebase.storage {
     function isAllowedUser() {
       return request.auth != null
         && request.auth.token.email in [
-          'charlene@example.com',
+          'rladdlesbergerroofing@gmail.com',
           'drewhufnagle@gmail.com'
         ];
     }
