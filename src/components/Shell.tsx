@@ -20,21 +20,21 @@ export function Shell({ children }: { children: ReactNode }) {
     <div className="app-shell">
       {/* Header */}
       <header className="app-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
           <div style={{
-            width: 36, height: 36, borderRadius: 10,
-            background: 'linear-gradient(135deg, #C7330A 0%, #E04A1F 100%)',
+            width: 38, height: 38, borderRadius: 12,
+            background: 'linear-gradient(135deg, #B8451A 0%, #D05A2E 100%)',
             display: 'flex',
             alignItems: 'center', justifyContent: 'center',
-            fontSize: 15, fontWeight: 800, color: 'white',
+            fontSize: 14, fontWeight: 800, color: 'white',
             letterSpacing: '-0.02em',
-            boxShadow: '0 2px 8px rgba(199, 51, 10, 0.3)',
+            boxShadow: '0 3px 10px rgba(184, 69, 26, 0.25)',
           }}>RL</div>
           <div>
             <h1 style={{ fontSize: 16, fontWeight: 700, margin: 0, lineHeight: 1.2, letterSpacing: '-0.01em' }}>
               R. L. Addlesberger
             </h1>
-            <span style={{ fontSize: 10, opacity: 0.55, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Roofing Operations</span>
+            <span style={{ fontSize: 10, opacity: 0.45, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Whiteboard Sync</span>
           </div>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>

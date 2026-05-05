@@ -1,10 +1,17 @@
 import { useNavigate } from 'react-router-dom'
 import { where, orderBy } from 'firebase/firestore'
 import { format, isToday } from 'date-fns'
-import { Inbox, Camera, AlertTriangle, Clock, CalendarDays, ChevronRight, ClipboardList, Briefcase, DollarSign } from 'lucide-react'
+import { Inbox, Camera, AlertTriangle, Clock, ChevronRight, Briefcase, DollarSign, Sparkles } from 'lucide-react'
 import { useCollection } from '@/hooks/useCollection'
 import type { BoardItem, Job, Photo } from '@/types'
 import * as T from '@/types'
+
+function getGreeting(): string {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 17) return 'Good afternoon'
+  return 'Good evening'
+}
 
 export function Today() {
   const navigate = useNavigate()
@@ -34,12 +41,14 @@ export function Today() {
 
   return (
     <div className="stack stack-lg">
-      {/* Date header */}
-      <div>
-        <p style={{ fontSize: 14, color: 'var(--muted)', margin: '0 0 2px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-          {format(today, 'EEEE')}
+      {/* Warm greeting */}
+      <div className="animate-in">
+        <p style={{ fontSize: 14, color: 'var(--muted)', margin: '0 0 4px', fontWeight: 600, letterSpacing: '0.03em' }}>
+          {format(today, 'EEEE')} · {format(today, 'MMMM d')}
         </p>
-        <h1 className="page-title">{format(today, 'MMMM d, yyyy')}</h1>
+        <h1 className="page-title" style={{ fontSize: 28 }}>
+          {getGreeting()}, Charlene
+        </h1>
       </div>
 
       {/* Stats row */}
@@ -66,17 +75,23 @@ export function Today() {
 
       {/* Quick actions */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-        <button className="btn btn-outline btn-sm" style={{ flexDirection: 'column', padding: '14px 8px', height: 'auto', minHeight: 'auto' }} onClick={() => navigate('/board', { state: { openCreate: true } })}>
-          <Inbox size={20} />
-          <span style={{ fontSize: 12 }}>Capture Update</span>
+        <button className="card card-pressable" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '18px 8px', textAlign: 'center', border: '1.5px solid var(--border)', cursor: 'pointer' }} onClick={() => navigate('/board', { state: { openCreate: true } })}>
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--brand-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--brand)' }}>
+            <Inbox size={19} />
+          </div>
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Capture Update</span>
         </button>
-        <button className="btn btn-outline btn-sm" style={{ flexDirection: 'column', padding: '14px 8px', height: 'auto', minHeight: 'auto' }} onClick={() => navigate('/photos', { state: { openCreate: true } })}>
-          <Camera size={20} />
-          <span style={{ fontSize: 12 }}>Whiteboard Photo</span>
+        <button className="card card-pressable" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '18px 8px', textAlign: 'center', border: '1.5px solid var(--border)', cursor: 'pointer' }} onClick={() => navigate('/photos', { state: { openCreate: true } })}>
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--warning-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--warning)' }}>
+            <Camera size={19} />
+          </div>
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Whiteboard Photo</span>
         </button>
-        <button className="btn btn-outline btn-sm" style={{ flexDirection: 'column', padding: '14px 8px', height: 'auto', minHeight: 'auto' }} onClick={() => navigate('/jobs', { state: { openCreate: true } })}>
-          <Briefcase size={20} />
-          <span style={{ fontSize: 12 }}>New Job</span>
+        <button className="card card-pressable" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '18px 8px', textAlign: 'center', border: '1.5px solid var(--border)', cursor: 'pointer' }} onClick={() => navigate('/jobs', { state: { openCreate: true } })}>
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--info-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--info)' }}>
+            <Briefcase size={19} />
+          </div>
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>New Job</span>
         </button>
       </div>
 
@@ -205,11 +220,12 @@ export function Today() {
         </div>
       )}
 
-      {/* All clear message */}
+      {/* All clear — calm, rewarding */}
       {inboxItems.length === 0 && urgentItems.length === 0 && unprocessedPhotos.length === 0 && waitingJobs.length === 0 && needsInvoice.length === 0 && (
-        <div className="card" style={{ textAlign: 'center', padding: 32, color: 'var(--muted)' }}>
-          <p style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>All caught up! 👍</p>
-          <p style={{ margin: '6px 0 0', fontSize: 14 }}>No lost info. Board is organized.</p>
+        <div className="all-clear animate-in">
+          <span className="emoji">✨</span>
+          <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--success)' }}>Everything's organized</p>
+          <p style={{ margin: '8px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>No items need attention. You're all caught up.</p>
         </div>
       )}
     </div>
