@@ -54,6 +54,39 @@
   --dur-slow: .35s;
 }
 
+/* ═══ DARK MODE ═══════════════════════════════════════════ */
+[data-theme="dark"] {
+  --brand-glow: rgba(199,51,10,0.2);
+  --brand-subtle: rgba(199,51,10,0.12);
+
+  --surface: #1E1E1E;
+  --surface-raised: #2A2A2A;
+  --bg: #121212;
+  --bg-warm: #1A1A1A;
+  --bg-tinted: #181818;
+
+  --text: #E8EAED;
+  --text-secondary: #9AA0A6;
+  --muted: #6B7280;
+  --placeholder: #4B5563;
+
+  --border: #333333;
+  --border-light: #2A2A2A;
+
+  --success: #34D399; --success-bg: rgba(52,211,153,0.12);
+  --warning: #FBBF24; --warning-bg: rgba(251,191,36,0.12);
+  --danger: #F87171;  --danger-bg: rgba(248,113,113,0.12);
+  --info: #60A5FA;    --info-bg: rgba(96,165,250,0.12);
+  --purple: #A78BFA;  --purple-bg: rgba(167,139,250,0.12);
+
+  --shadow-xs: 0 1px 2px rgba(0,0,0,.2);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.3);
+  --shadow: 0 2px 6px rgba(0,0,0,.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.4);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,.5);
+  --shadow-glow: 0 4px 20px rgba(199,51,10,.35);
+}
+
 /* ═══ Reset ═══════════════════════════════════════════════ */
 *,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-size:16px;line-height:1.5;color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;scroll-behavior:smooth}
@@ -67,7 +100,7 @@ img{content-visibility:auto}
 
 /* ═══ App Shell ═══════════════════════════════════════════ */
 .app-shell{display:flex;flex-direction:column;min-height:100dvh}
-.app-header{position:sticky;top:0;z-index:40;height:var(--nav-height);background:#202124;color:#fff;display:flex;align-items:center;padding:0 20px;box-shadow:0 2px 8px rgba(0,0,0,.15);will-change:transform}
+.app-header{position:sticky;top:0;z-index:40;height:var(--nav-height);background:#1a1a1a;color:#fff;display:flex;align-items:center;padding:0 20px;box-shadow:0 2px 8px rgba(0,0,0,.15);will-change:transform}
 .app-header h1{font-size:16px;font-weight:600;margin:0;color:#fff}
 .app-content{flex:1;padding:20px 16px calc(var(--bottom-nav-height) + 24px);max-width:900px;margin:0 auto;width:100%}
 @media(min-width:768px){.app-content{padding:28px 32px 40px}}
@@ -105,11 +138,11 @@ img{content-visibility:auto}
 .card-pressable:active{transform:scale(.985)}
 
 /* Colored card accents — Keep style */
-.card-amber{border-left:4px solid var(--warning);background:#FFFDF7}
-.card-red{border-left:4px solid var(--danger);background:#FFF9F8}
-.card-blue{border-left:4px solid var(--info);background:#F8FBFF}
-.card-green{border-left:4px solid var(--success);background:#F6FBF8}
-.card-purple{border-left:4px solid var(--purple);background:#FBF8FF}
+.card-amber{border-left:4px solid var(--warning);background:var(--warning-bg)}
+.card-red{border-left:4px solid var(--danger);background:var(--danger-bg)}
+.card-blue{border-left:4px solid var(--info);background:var(--info-bg)}
+.card-green{border-left:4px solid var(--success);background:var(--success-bg)}
+.card-purple{border-left:4px solid var(--purple);background:var(--purple-bg)}
 
 /* ═══ Buttons ════════════════════════════════════════════ */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 20px;min-height:44px;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:all var(--dur) var(--ease);text-decoration:none;white-space:nowrap}
@@ -147,7 +180,7 @@ img{content-visibility:auto}
 .label{display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;letter-spacing:.02em}
 
 /* ═══ Modal — smooth sheet ═══════════════════════════════ */
-.modal-overlay{position:fixed;inset:0;z-index:100;background:rgba(32,33,36,.4);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .15s var(--ease-out)}
+.modal-overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .15s var(--ease-out)}
 @media(min-width:768px){.modal-overlay{align-items:center}}
 .modal-content{background:var(--surface);width:100%;max-width:540px;max-height:90dvh;overflow-y:auto;border-radius:var(--radius-xl) var(--radius-xl) 0 0;padding:24px 20px;animation:slideUp .25s var(--ease-out);box-shadow:0 -2px 20px rgba(0,0,0,.08)}
 @media(min-width:768px){.modal-content{border-radius:var(--radius-xl);margin:24px;box-shadow:var(--shadow-lg)}}
@@ -175,7 +208,7 @@ img{content-visibility:auto}
 .filter-tabs::-webkit-scrollbar{display:none}
 .filter-tab{padding:7px 16px;border-radius:var(--radius-pill);font-size:13px;font-weight:600;white-space:nowrap;border:1.5px solid var(--border);background:var(--surface);color:var(--text-secondary);cursor:pointer;transition:all var(--dur) var(--ease)}
 .filter-tab:hover{border-color:var(--muted);background:var(--bg)}
-.filter-tab.active{background:var(--text);color:#fff;border-color:var(--text)}
+.filter-tab.active{background:var(--text);color:var(--bg);border-color:var(--text)}
 
 /* ═══ Stat Cards — interactive, Keep-inspired ════════════ */
 .stat-card{background:var(--surface);border-radius:var(--radius);padding:16px 12px;border:1px solid var(--border-light);text-align:center;transition:all .2s var(--ease);cursor:pointer;position:relative;overflow:hidden}
@@ -209,7 +242,7 @@ img{content-visibility:auto}
 .quick-action-label{font-size:12px;font-weight:600;color:var(--text-secondary)}
 
 /* ═══ All Clear ══════════════════════════════════════════ */
-.all-clear{background:linear-gradient(135deg,var(--success-bg) 0%,#F0FFF7 100%);border:1px solid rgba(30,142,62,.1);border-radius:var(--radius-lg);padding:40px 24px;text-align:center}
+.all-clear{background:var(--success-bg);border:1px solid rgba(30,142,62,.1);border-radius:var(--radius-lg);padding:40px 24px;text-align:center}
 .all-clear .emoji{font-size:32px;display:block;margin-bottom:10px;animation:breathe 3s ease-in-out infinite}
 
 /* ═══ Invoice Template Card ══════════════════════════════ */

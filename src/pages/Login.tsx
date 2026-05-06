@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react'
+import { useState, useEffect, FormEvent } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 
 export function Login() {
@@ -7,6 +7,12 @@ export function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Apply dark theme on login page too
+  useEffect(() => {
+    const stored = localStorage.getItem('rl-theme') || 'dark'
+    document.documentElement.setAttribute('data-theme', stored)
+  }, [])
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -28,15 +34,16 @@ export function Login() {
       alignItems: 'center',
       justifyContent: 'center',
       padding: 24,
-      background: '#202124',
+      background: 'var(--bg)',
     }}>
       <div style={{
         width: '100%',
         maxWidth: 380,
-        background: '#fff',
+        background: 'var(--surface)',
         borderRadius: 16,
         padding: 32,
         boxShadow: '0 8px 40px rgba(0,0,0,.2)',
+        border: '1px solid var(--border-light)',
       }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{
@@ -46,10 +53,10 @@ export function Login() {
             marginBottom: 16, fontSize: 22, fontWeight: 800, color: '#fff',
             boxShadow: '0 4px 16px rgba(199,51,10,.25)',
           }}>RL</div>
-          <h1 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 2px', color: '#202124' }}>
+          <h1 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 2px', color: 'var(--text)' }}>
             R. L. Addlesberger
           </h1>
-          <p style={{ fontSize: 13, color: '#9AA0A6', margin: 0, fontWeight: 500 }}>
+          <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0, fontWeight: 500 }}>
             Whiteboard Sync
           </p>
         </div>
@@ -70,7 +77,7 @@ export function Login() {
           {error && (
             <div style={{
               padding: '10px 14px', borderRadius: 8,
-              background: '#FCE8E6', color: '#D93025',
+              background: 'var(--danger-bg)', color: 'var(--danger)',
               fontSize: 13, fontWeight: 500,
             }}>{error}</div>
           )}

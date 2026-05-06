@@ -1,7 +1,8 @@
 import { ReactNode } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Inbox, Briefcase, FileText, Receipt, Camera, Settings, LogOut } from 'lucide-react'
+import { LayoutDashboard, Inbox, Briefcase, FileText, Receipt, Camera, Settings, LogOut, Moon, Sun } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { useTheme } from '@/hooks/useTheme'
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Today' },
@@ -14,6 +15,7 @@ const navItems = [
 
 export function Shell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth()
+  const { theme, toggle, isDark } = useTheme()
   const location = useLocation()
 
   return (
@@ -33,10 +35,17 @@ export function Shell({ children }: { children: ReactNode }) {
             <span style={{ fontSize: 10, opacity: .4, fontWeight: 500, letterSpacing: '.06em', textTransform: 'uppercase' }}>Whiteboard Sync</span>
           </div>
         </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 13, opacity: 0.8 }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontSize: 13, opacity: 0.8, marginRight: 4 }}>
             {user?.displayName || user?.email?.split('@')[0]}
           </span>
+          <button
+            onClick={toggle}
+            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            style={{ color: 'white', padding: 8, display: 'flex', background: 'none', border: 'none', cursor: 'pointer', borderRadius: 8, transition: 'background .15s' }}
+          >
+            {isDark ? <Sun size={19} /> : <Moon size={19} />}
+          </button>
           <NavLink to="/settings" style={{ color: 'white', padding: 8, display: 'flex' }}>
             <Settings size={20} />
           </NavLink>

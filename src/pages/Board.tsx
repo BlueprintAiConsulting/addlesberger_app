@@ -310,7 +310,7 @@ export function Board() {
                 <h3 style={{ fontSize: 12, fontWeight: 700, margin: 0, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-secondary)' }}>{col.label}</h3>
                 <span style={{ fontSize: 12, fontWeight: 700, color: isInbox && items.length > 0 ? 'var(--brand)' : 'var(--muted)', background: isInbox && items.length > 0 ? 'var(--brand-subtle)' : 'var(--bg)', padding: '2px 8px', borderRadius: 999, minWidth: 24, textAlign: 'center' }}>{items.length}</span>
               </div>
-              <div className="stack stack-sm" style={{ minHeight: 60, background: isInbox ? '#FFF5F2' : 'var(--bg)', borderRadius: 'var(--radius)', padding: 8, border: isInbox && items.length > 0 ? '1.5px dashed var(--brand)' : 'none' }}>
+              <div className="stack stack-sm" style={{ minHeight: 60, background: isInbox ? 'var(--brand-subtle)' : 'var(--bg)', borderRadius: 'var(--radius)', padding: 8, border: isInbox && items.length > 0 ? '1.5px dashed var(--brand)' : 'none' }}>
                 {items.length === 0 ? (
                   <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--muted)', padding: 16 }}>{isInbox ? 'No unsorted items 👍' : 'Empty'}</p>
                 ) : items.map((item) => (
