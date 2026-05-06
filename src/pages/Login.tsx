@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth'
 
 // Username → email shortcuts so Charlene doesn't need to type her email
 const USERNAME_MAP: Record<string, string> = {
-  charlene: 'rladdlesbergerroofing@gmail.com',
+  charleen: 'rladdlesbergerroofing@gmail.com',
   drew: 'drewhufnagle@gmail.com',
 }
 
@@ -95,7 +95,7 @@ export function Login() {
         <form onSubmit={handleSubmit} className="stack stack-md">
           <div>
             <label className="label">Username or Email</label>
-            <input className="input" type="text" placeholder="charlene"
+            <input className="input" type="text" placeholder="charleen"
               value={email} onChange={(e) => setEmail(e.target.value)}
               required autoComplete="username" autoCapitalize="none" />
           </div>
