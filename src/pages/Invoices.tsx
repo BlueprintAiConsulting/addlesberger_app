@@ -1,5 +1,5 @@
 import { useState, FormEvent, useRef } from 'react'
-import { orderBy, Timestamp } from 'firebase/firestore'
+import { orderBy, where, Timestamp } from 'firebase/firestore'
 import { format } from 'date-fns'
 import { Plus, FileText, Copy, Trash2, Printer, Eye, ArrowLeft, Download, Mail } from 'lucide-react'
 import { downloadInvoicePDF, emailInvoice } from '@/lib/invoicePdf'
@@ -10,6 +10,7 @@ import { addItem, updateItem, deleteItem } from '@/lib/firestore'
 import { Modal } from '@/components/Modal'
 import { EmptyState } from '@/components/EmptyState'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { DocumentUploader } from '@/components/DocumentUploader'
 import { DEFAULT_INVOICE_TEMPLATES } from '@/data/defaultInvoiceTemplates'
 import type { Invoice, InvoiceTemplate, InvoicePaymentStatus, InvoiceStatus, Job } from '@/types'
 import * as T from '@/types'
@@ -52,6 +53,7 @@ export function Invoices() {
   const { data: invoices } = useCollection<Invoice>('invoices', [orderBy('createdAt', 'desc')])
   const { data: invoiceTemplates } = useCollection<InvoiceTemplate>('invoiceTemplates', [orderBy('createdAt', 'desc')])
   const { data: jobs } = useCollection<Job>('jobs', [orderBy('createdAt', 'desc')])
+  const { data: uploadedDocs } = useCollection<any>('documentTemplates', [where('type', '==', 'invoice'), orderBy('createdAt', 'desc')])
 
   // --- Seed defaults ---
   const seedDefaults = async () => {
@@ -354,7 +356,16 @@ export function Invoices() {
           </div>
         )
       ) : (
-        <div className="stack stack-sm">
+        <div className="stack stack-md">
+          {/* Document uploader */}
+          <div>
+            <h2 className="section-heading" style={{ marginBottom: 10 }}>📎 Uploaded Templates</h2>
+            <DocumentUploader type="invoice" userId={user?.uid || ''} documents={uploadedDocs} />
+          </div>
+
+          <div>
+            <h2 className="section-heading" style={{ marginBottom: 10 }}>✍️ Quick-Fill Templates</h2>
+          </div>
           {invoiceTemplates.length === 0 && (
             <div style={{ textAlign: 'center', padding: '40px 24px', background: 'var(--bg-tinted)', borderRadius: 'var(--radius-lg)', border: '1px dashed var(--border)' }}>
               <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: 15, color: 'var(--text)' }}>No templates yet</p>

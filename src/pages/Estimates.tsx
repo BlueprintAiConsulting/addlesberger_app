@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react'
-import { orderBy, Timestamp } from 'firebase/firestore'
+import { orderBy, where, Timestamp } from 'firebase/firestore'
 import { Plus, FileText, Copy, Edit2, Trash2 } from 'lucide-react'
 import { useCollection } from '@/hooks/useCollection'
 import { useAuth } from '@/hooks/useAuth'
@@ -7,6 +7,7 @@ import { addItem, updateItem, deleteItem } from '@/lib/firestore'
 import { Modal } from '@/components/Modal'
 import { EmptyState } from '@/components/EmptyState'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { DocumentUploader } from '@/components/DocumentUploader'
 import type { Estimate, EstimateTemplate, EstimateStatus, LineItem, Job } from '@/types'
 import * as T from '@/types'
 
@@ -33,6 +34,7 @@ export function Estimates() {
   const { data: estimates } = useCollection<Estimate>('estimates', [orderBy('createdAt', 'desc')])
   const { data: templates } = useCollection<EstimateTemplate>('estimateTemplates', [orderBy('createdAt', 'desc')])
   const { data: jobs } = useCollection<Job>('jobs', [orderBy('createdAt', 'desc')])
+  const { data: uploadedDocs } = useCollection<any>('documentTemplates', [where('type', '==', 'estimate'), orderBy('createdAt', 'desc')])
 
   const updateLineItem = (idx: number, field: keyof LineItem, value: string | number) => {
     const updated = [...lineItems]
@@ -163,9 +165,20 @@ export function Estimates() {
           </div>
         )
       ) : (
-        templates.length === 0 ? (
-          <EmptyState icon={<Copy />} message="No templates yet" action={<button className="btn btn-primary btn-sm" onClick={openCreateTemplate}>Create Template</button>} />
-        ) : (
+        <div className="stack stack-md">
+          {/* Document uploader */}
+          <div>
+            <h2 className="section-heading" style={{ marginBottom: 10 }}>📎 Uploaded Templates</h2>
+            <DocumentUploader type="estimate" userId={user?.uid || ''} documents={uploadedDocs} />
+          </div>
+
+          {/* Manual templates */}
+          <div>
+            <h2 className="section-heading" style={{ marginBottom: 10 }}>✍️ Quick-Fill Templates</h2>
+          </div>
+          {templates.length === 0 ? (
+            <EmptyState icon={<Copy />} message="No quick-fill templates yet" action={<button className="btn btn-primary btn-sm" onClick={openCreateTemplate}>Create Template</button>} />
+          ) : (
           <div className="stack stack-sm">
             {templates.map(tmpl => (
               <div key={tmpl.id} className="card">
@@ -184,7 +197,8 @@ export function Estimates() {
             ))}
           </div>
         )
-      )}
+        )}
+        </div>
 
       <button className="fab" onClick={() => tab === 'templates' ? openCreateTemplate() : openCreateEstimate()}><Plus size={24} /></button>
 
