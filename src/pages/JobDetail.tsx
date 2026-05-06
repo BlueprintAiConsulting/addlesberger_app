@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { doc, onSnapshot, Timestamp, orderBy } from 'firebase/firestore'
 import { format } from 'date-fns'
-import { ArrowLeft, Phone, Mail, MapPin, Edit2, Archive, FileText, Image as ImageIcon } from 'lucide-react'
+import { ArrowLeft, Phone, Mail, MapPin, Edit2, Archive, Trash2, FileText, Image as ImageIcon } from 'lucide-react'
 import { db, COMPANY_ID } from '@/firebase'
-import { updateItem, archiveItem, unarchiveItem } from '@/lib/firestore'
+import { updateItem, archiveItem, unarchiveItem, deleteItem } from '@/lib/firestore'
 import { useCollection } from '@/hooks/useCollection'
 import { Modal } from '@/components/Modal'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import type { Job, JobStatus, Estimate, Photo } from '@/types'
 import * as T from '@/types'
 
@@ -18,6 +19,7 @@ export function JobDetail() {
   const [job, setJob] = useState<Job | null>(null)
   const [loading, setLoading] = useState(true)
   const [editOpen, setEditOpen] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
 
   // Edit form state
   const [customerName, setCustomerName] = useState('')
@@ -90,6 +92,9 @@ export function JobDetail() {
           job.archivedAt ? await unarchiveItem('jobs', job.id) : await archiveItem('jobs', job.id)
         }}>
           <Archive size={16} />
+        </button>
+        <button className="btn btn-danger btn-sm" onClick={() => setDeleteConfirm(true)}>
+          <Trash2 size={16} /> Delete
         </button>
       </div>
 
@@ -175,6 +180,21 @@ export function JobDetail() {
           <button className="btn btn-primary btn-full" onClick={handleSave}>Save Changes</button>
         </div>
       </Modal>
+
+      {/* Delete confirm */}
+      <ConfirmDialog
+        open={deleteConfirm}
+        title="Delete Job"
+        message={`Permanently delete "${job.customerName}"? This can't be undone.`}
+        confirmLabel="Delete"
+        danger
+        onConfirm={async () => {
+          await deleteItem('jobs', job.id)
+          setDeleteConfirm(false)
+          navigate('/jobs')
+        }}
+        onCancel={() => setDeleteConfirm(false)}
+      />
     </div>
   )
 }
