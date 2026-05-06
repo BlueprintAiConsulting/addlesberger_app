@@ -121,7 +121,7 @@ export function Photos() {
     setExtractedItems([])
     setExtractionSummary('')
 
-    const result = await extractWhiteboardData(viewPhoto.url)
+    const result = await extractWhiteboardData(viewPhoto.url, viewPhoto.caption)
 
     if (result.error) {
       setExtractionError(result.error)
@@ -293,8 +293,8 @@ export function Photos() {
             <img src={previewUrl} alt="Preview" style={{ width: '100%', maxHeight: 240, objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
           )}
           <div>
-            <label className="label">Caption / Notes</label>
-            <input className="input" value={caption} onChange={e => setCaption(e.target.value)} placeholder="What's in this photo?" />
+            <label className="label">Notes / AI Direction</label>
+            <textarea className="input textarea" value={caption} onChange={e => setCaption(e.target.value)} placeholder="Describe what's in this photo — for whiteboard scans, add directions like 'focus on the left column' or 'these are all gutter jobs'" rows={3} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>

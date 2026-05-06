@@ -64,10 +64,16 @@ async function imageUrlToBase64(url: string): Promise<{ base64: string; mimeType
   })
 }
 
-export async function extractWhiteboardData(imageUrl: string): Promise<ExtractionResult> {
+export async function extractWhiteboardData(imageUrl: string, userNotes?: string): Promise<ExtractionResult> {
   try {
     const apiKey = getApiKey()
     const { base64, mimeType } = await imageUrlToBase64(imageUrl)
+
+    // Build the prompt — append user notes as additional direction if provided
+    let prompt = EXTRACTION_PROMPT
+    if (userNotes && userNotes.trim()) {
+      prompt += `\n\nADDITIONAL CONTEXT / DIRECTION FROM THE USER:\n"${userNotes.trim()}"\n\nUse the above notes to guide your extraction — they may describe what's on the board, which section to focus on, what type of jobs these are, or other helpful context.`
+    }
 
     // Direct REST API call — zero dependencies
     const res = await fetch(
@@ -78,7 +84,7 @@ export async function extractWhiteboardData(imageUrl: string): Promise<Extractio
         body: JSON.stringify({
           contents: [{
             parts: [
-              { text: EXTRACTION_PROMPT },
+              { text: prompt },
               { inlineData: { mimeType, data: base64 } },
             ],
           }],
