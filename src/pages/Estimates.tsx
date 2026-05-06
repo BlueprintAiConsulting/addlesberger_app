@@ -196,9 +196,9 @@ export function Estimates() {
               </div>
             ))}
           </div>
-        )
-        )}
+          )}
         </div>
+      )}
 
       <button className="fab" onClick={() => tab === 'templates' ? openCreateTemplate() : openCreateEstimate()}><Plus size={24} /></button>
 
