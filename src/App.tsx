@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { ALLOWED_EMAILS } from '@/firebase'
 import { Shell } from '@/components/Shell'
 import { Login } from '@/pages/Login'
+import { TutorialOverlay, useTutorial } from '@/components/Tutorial'
 
 // Lazy-load all route pages — only downloads when navigated to
 const Today = lazy(() => import('@/pages/Today').then(m => ({ default: m.Today })))
@@ -72,26 +73,38 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+function AppContent() {
+  const { showTutorial, dismissTutorial, startTutorial } = useTutorial()
+
+  return (
+    <>
+      <Shell>
+        <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/" element={<Today />} />
+          <Route path="/board" element={<Board />} />
+          <Route path="/jobs" element={<Jobs />} />
+          <Route path="/jobs/:jobId" element={<JobDetail />} />
+          <Route path="/estimates" element={<Estimates />} />
+          <Route path="/invoices" element={<Invoices />} />
+          <Route path="/photos" element={<Photos />} />
+          <Route path="/settings" element={<Settings onRestartTutorial={startTutorial} />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+        </Suspense>
+      </Shell>
+      {showTutorial && <TutorialOverlay onClose={dismissTutorial} />}
+    </>
+  )
+}
+
 export default function App() {
   return (
     <BrowserRouter basename="/addlesberger_app">
       <AuthGate>
-        <Shell>
-          <Suspense fallback={<PageLoader />}>
-          <Routes>
-            <Route path="/" element={<Today />} />
-            <Route path="/board" element={<Board />} />
-            <Route path="/jobs" element={<Jobs />} />
-            <Route path="/jobs/:jobId" element={<JobDetail />} />
-            <Route path="/estimates" element={<Estimates />} />
-            <Route path="/invoices" element={<Invoices />} />
-            <Route path="/photos" element={<Photos />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-          </Suspense>
-        </Shell>
+        <AppContent />
       </AuthGate>
     </BrowserRouter>
   )
 }
+
