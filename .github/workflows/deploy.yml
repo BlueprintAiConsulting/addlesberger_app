@@ -40,6 +40,7 @@ jobs:
           VITE_FIREBASE_APP_ID=1:697460116517:web:40e997ac315c36dce503cc
           VITE_COMPANY_ID=default-company
           VITE_ALLOWED_EMAILS=rladdlesbergerroofing@gmail.com,drewhufnagle@gmail.com
+          VITE_GEMINI_API_KEY=${{ secrets.VITE_GEMINI_API_KEY }}
           EOF
 
       - run: npm run build
