@@ -89,7 +89,7 @@
 
 /* ═══ Reset ═══════════════════════════════════════════════ */
 *,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-size:16px;line-height:1.5;color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;scroll-behavior:smooth}
+html{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-size:16px;line-height:1.5;color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;scroll-behavior:smooth;text-rendering:optimizeLegibility}
 body{margin:0;padding:0;min-height:100dvh;overflow-x:hidden}
 #root{min-height:100dvh;display:flex;flex-direction:column}
 ::-webkit-scrollbar{width:5px;height:5px}
@@ -100,7 +100,7 @@ img{content-visibility:auto}
 
 /* ═══ App Shell ═══════════════════════════════════════════ */
 .app-shell{display:flex;flex-direction:column;min-height:100dvh}
-.app-header{position:sticky;top:0;z-index:40;height:var(--nav-height);background:#1a1a1a;color:#fff;display:flex;align-items:center;padding:0 20px;box-shadow:0 2px 8px rgba(0,0,0,.15);will-change:transform}
+.app-header{position:sticky;top:0;z-index:40;height:var(--nav-height);background:rgba(26,26,26,.92);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);color:#fff;display:flex;align-items:center;padding:0 20px;padding-top:env(safe-area-inset-top,0);box-shadow:0 1px 0 rgba(255,255,255,.06);will-change:transform}
 .app-header h1{font-size:16px;font-weight:600;margin:0;color:#fff}
 .app-content{flex:1;padding:20px 16px calc(var(--bottom-nav-height) + 24px);max-width:900px;margin:0 auto;width:100%}
 @media(min-width:768px){.app-content{padding:28px 32px 40px}}
@@ -112,7 +112,8 @@ img{content-visibility:auto}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
 /* ═══ Bottom Nav — Keep-style ════════════════════════════ */
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:50;height:var(--bottom-nav-height);background:var(--surface);border-top:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-around;padding-bottom:env(safe-area-inset-bottom,0);box-shadow:0 -1px 6px rgba(0,0,0,.04)}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:50;height:var(--bottom-nav-height);background:rgba(var(--surface-rgb,255,255,255),.92);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-top:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-around;padding-bottom:env(safe-area-inset-bottom,0);box-shadow:0 -1px 0 rgba(0,0,0,.04)}
+[data-theme="dark"] .bottom-nav{background:rgba(30,30,30,.92)}
 @media(min-width:768px){.bottom-nav{display:none}}
 .bottom-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 14px;text-decoration:none;color:var(--muted);font-size:11px;font-weight:600;border-radius:var(--radius-sm);transition:color var(--dur) var(--ease);position:relative}
 .bottom-nav-item.active{color:var(--brand)}
@@ -255,56 +256,71 @@ img{content-visibility:auto}
 .invoice-card:hover{box-shadow:var(--shadow-sm);border-color:var(--border)}
 .invoice-amount{font-size:24px;font-weight:800;color:var(--text);letter-spacing:-.02em}
 
-/* ═══ Mobile — optimized for Charlene's phone ═══════════ */
+/* ═══ Mobile — premium polish for Charlene's phone ══════ */
 @media(max-width:480px){
-  .page-title{font-size:20px}
+  .page-title{font-size:22px;letter-spacing:-.03em}
   .page-header{flex-wrap:wrap;gap:8px}
-  .stat-card{padding:12px 8px}
-  .stat-value{font-size:22px}
-  .card{padding:14px 12px}
-  .btn{min-height:46px;font-size:14px;border-radius:var(--radius)}
-  .btn-sm{min-height:36px;font-size:13px;padding:8px 14px}
-  .input{min-height:46px;font-size:16px;border-radius:var(--radius)}
+  .stat-card{padding:14px 10px;border-radius:var(--radius)}
+  .stat-value{font-size:24px}
+  .stat-label{font-size:10px;letter-spacing:.06em}
+  .card{padding:14px 12px;border-radius:var(--radius)}
+  .btn{min-height:48px;font-size:14px;border-radius:var(--radius)}
+  .btn-sm{min-height:38px;font-size:13px;padding:8px 16px}
+  .input{min-height:48px;font-size:16px;border-radius:var(--radius)}
   .select{font-size:16px}
   .textarea{font-size:16px}
-  .modal-content{padding:20px 16px 28px;padding-bottom:calc(28px + env(safe-area-inset-bottom,0));max-height:92dvh}
+  .modal-content{padding:20px 16px 28px;padding-bottom:calc(28px + env(safe-area-inset-bottom,0));max-height:92dvh;border-radius:var(--radius-xl) var(--radius-xl) 0 0}
   .modal-header h2{font-size:17px}
-  .filter-tabs{gap:6px;margin-bottom:10px;padding:2px 0}
-  .filter-tab{padding:8px 14px;font-size:12px}
+  .filter-tabs{gap:6px;margin-bottom:12px;padding:2px 0}
+  .filter-tab{padding:8px 16px;font-size:12px;border-radius:var(--radius-pill)}
   .empty-state{padding:32px 16px}
   .badge{padding:3px 10px;font-size:10px}
   /* Fat finger-friendly nav items */
-  .bottom-nav-item{padding:8px 10px;gap:3px;min-width:0}
-  .bottom-nav-item svg{width:24px;height:24px}
+  .bottom-nav-item{padding:8px 12px;gap:3px;min-width:0}
+  .bottom-nav-item svg{width:22px;height:22px}
   .bottom-nav{height:72px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0))}
-  .app-content{padding:16px 12px calc(80px + env(safe-area-inset-bottom,0))}
-  .fab{bottom:calc(80px + env(safe-area-inset-bottom,0));right:12px;width:52px;height:52px;border-radius:14px}
+  .app-header{padding:0 16px;padding-top:env(safe-area-inset-top,0)}
+  .app-content{padding:16px 14px calc(80px + env(safe-area-inset-bottom,0))}
+  .fab{bottom:calc(80px + env(safe-area-inset-bottom,0));right:14px;width:54px;height:54px;border-radius:16px}
+  /* Section headings tighter */
+  .section-heading{font-size:12px;margin:0 0 10px}
+  /* Quick action grid tighter */
+  .quick-action{padding:16px 6px;gap:6px}
+  .quick-action-icon{width:40px;height:40px;border-radius:10px}
+  .quick-action-label{font-size:11px}
   /* Prevent iOS zoom on focus */
   input,select,textarea{font-size:16px!important}
   /* Smooth momentum scrolling */
-  .board-scroll{-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;scroll-padding:0 12px;padding:0 4px 12px}
+  .board-scroll{-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;scroll-padding:0 14px;padding:0 4px 12px}
 }
 @media(max-width:767px){
-  .board-scroll{scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scroll-padding:0 12px}
+  .board-scroll{scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scroll-padding:0 14px}
   .board-col{scroll-snap-align:start;min-width:82vw!important;flex:0 0 82vw!important}
 }
-/* Tall phone safe area for notch/island */
+/* Tall phone safe area for notch/Dynamic Island */
 @supports(padding: max(0px)){
   .bottom-nav{padding-bottom:max(8px, env(safe-area-inset-bottom,0))}
+  .app-header{padding-top:max(0px, env(safe-area-inset-top,0))}
   @media(max-width:480px){
     .app-content{padding-bottom:max(80px, calc(72px + env(safe-area-inset-bottom,0) + 16px))}
     .fab{bottom:max(80px, calc(72px + env(safe-area-inset-bottom,0) + 8px))}
   }
 }
 
-/* ═══ Touch Feedback ═════════════════════════════════════ */
+/* ═══ Touch Feedback — haptic-feel ═══════════════════════ */
 @media(hover:none) and (pointer:coarse){
-  .card-pressable:active{transform:scale(.97);transition:transform .08s}
-  .btn:active{transform:scale(.95);transition:transform .08s}
-  .quick-action:active{transform:scale(.94);transition:transform .08s}
-  .filter-tab:active{transform:scale(.94)}
-  .stat-card:active{transform:scale(.96)}
-  .fab:active{transform:scale(.88)}
+  .card-pressable:active{transform:scale(.97);transition:transform .06s ease-out}
+  .btn:active{transform:scale(.95);transition:transform .06s ease-out}
+  .quick-action:active{transform:scale(.93);transition:transform .06s ease-out}
+  .filter-tab:active{transform:scale(.93);transition:transform .06s ease-out}
+  .stat-card:active{transform:scale(.95);transition:transform .06s ease-out}
+  .fab:active{transform:scale(.85);transition:transform .06s ease-out}
+  .bottom-nav-item:active{transform:scale(.88);transition:transform .06s ease-out}
+  .sidebar-item:active{transform:scale(.97)}
+  /* Remove hover effects on touch */
+  .card:hover{box-shadow:none;border-color:var(--border-light)}
+  .stat-card:hover{box-shadow:none;transform:none}
+  .quick-action:hover{box-shadow:none;transform:none}
 }
 
 /* ═══ Utilities ══════════════════════════════════════════ */
