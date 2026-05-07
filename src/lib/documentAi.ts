@@ -171,32 +171,26 @@ async function extractDocxText(file: File): Promise<string> {
     const parser = new DOMParser()
     const xmlDoc = parser.parseFromString(documentXml, 'application/xml')
 
-    // Get all text nodes from w:t elements
-    const textNodes = xmlDoc.getElementsByTagNameNS(
-      'http://schemas.openxmlformats.org/wordprocessingml/2006/main', 't'
+    // Walk all w:p paragraph elements and collect text from w:t children
+    const pNodes = xmlDoc.getElementsByTagNameNS(
+      'http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'p'
     )
 
     const paragraphs: string[] = []
-    let currentParagraph = ''
-    let lastParent: Element | null = null
-
-    for (let j = 0; j < textNodes.length; j++) {
-      const node = textNodes[j]
-      const text = node.textContent || ''
-      // Check if we're in a new paragraph (w:p)
-      const pNode = node.closest('*|p') || node.parentElement?.closest('*|p')
-      if (pNode !== lastParent && currentParagraph) {
-        paragraphs.push(currentParagraph)
-        currentParagraph = ''
+    for (let j = 0; j < pNodes.length; j++) {
+      const tNodes = pNodes[j].getElementsByTagNameNS(
+        'http://schemas.openxmlformats.org/wordprocessingml/2006/main', 't'
+      )
+      let line = ''
+      for (let k = 0; k < tNodes.length; k++) {
+        line += tNodes[k].textContent || ''
       }
-      lastParent = pNode as Element
-      currentParagraph += text
+      if (line.trim()) paragraphs.push(line)
     }
-    if (currentParagraph) paragraphs.push(currentParagraph)
 
     return paragraphs.join('\n')
   } catch (err) {
-    console.warn('DOCX parse failed, sending raw to Gemini:', err)
+    console.warn('DOCX parse failed:', err)
     return ''
   }
 }
@@ -217,20 +211,14 @@ export async function extractTemplateFromDocument(
     let parts: any[]
 
     if (isDocx(file)) {
-      // DOCX: extract text client-side, send as text prompt
+      // DOCX: extract text client-side, send as text-only prompt
       const docText = await extractDocxText(file)
       if (!docText) {
-        // Fallback: send as binary and let Gemini try
-        const { base64, mimeType } = await fileToBase64(file)
-        parts = [
-          { text: prompt },
-          { inlineData: { mimeType, data: base64 } },
-        ]
-      } else {
-        parts = [
-          { text: `${prompt}\n\n--- DOCUMENT CONTENT ---\n${docText}\n--- END DOCUMENT ---` },
-        ]
+        throw new Error('Could not read text from this Word document. Try saving it as a PDF and uploading that instead.')
       }
+      parts = [
+        { text: `${prompt}\n\n--- DOCUMENT CONTENT ---\n${docText}\n--- END DOCUMENT ---` },
+      ]
     } else {
       // PDF/image: send as binary inline data
       const { base64, mimeType } = await fileToBase64(file)
