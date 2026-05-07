@@ -1,16 +1,12 @@
 import { useState, useEffect } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
-import { Building2, LogOut, User, BookOpen } from 'lucide-react'
+import { Building2, LogOut, User } from 'lucide-react'
 import { db, COMPANY_ID } from '@/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { Modal } from '@/components/Modal'
 import type { Company } from '@/types'
 
-interface SettingsProps {
-  onRestartTutorial?: () => void
-}
-
-export function Settings({ onRestartTutorial }: SettingsProps) {
+export function Settings() {
   const { user, logout } = useAuth()
   const [company, setCompany] = useState<Company | null>(null)
   const [editOpen, setEditOpen] = useState(false)
@@ -44,11 +40,6 @@ export function Settings({ onRestartTutorial }: SettingsProps) {
       updatedAt: serverTimestamp(),
     })
     setEditOpen(false)
-  }
-
-  const handleRestartTutorial = () => {
-    localStorage.removeItem('rl-tutorial-done')
-    onRestartTutorial?.()
   }
 
   return (
@@ -87,20 +78,6 @@ export function Settings({ onRestartTutorial }: SettingsProps) {
         </div>
         <button className="btn btn-outline btn-full" style={{ marginTop: 20 }} onClick={logout}>
           <LogOut size={18} /> Sign Out
-        </button>
-      </div>
-
-      {/* App Help */}
-      <div className="card">
-        <div className="row gap-sm" style={{ marginBottom: 16 }}>
-          <BookOpen size={20} style={{ color: 'var(--brand)' }} />
-          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Help & Tutorial</h2>
-        </div>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '0 0 16px' }}>
-          Need a refresher? Restart the guided tour to learn about each section of the app.
-        </p>
-        <button className="btn btn-outline btn-full" onClick={handleRestartTutorial}>
-          <BookOpen size={18} /> Restart Tutorial
         </button>
       </div>
 
