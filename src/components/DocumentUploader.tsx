@@ -1,98 +1,82 @@
 import { useState, useRef } from 'react'
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage'
-import { storage } from '@/firebase'
+import { Upload, CheckCircle2, AlertCircle, X, Loader2, Sparkles } from 'lucide-react'
 import { addItem } from '@/lib/firestore'
-import { Upload, FileText, CheckCircle2, AlertCircle, X, File } from 'lucide-react'
-
-interface UploadedDoc {
-  id: string
-  name: string
-  fileName: string
-  url: string
-  type: 'estimate' | 'invoice'
-  fileType: string
-  fileSize: number
-  uploadedBy: string
-  createdAt: any
-}
+import { extractTemplateFromDocument, type ExtractedEstimateTemplate, type ExtractedInvoiceTemplate } from '@/lib/documentAi'
 
 interface Props {
   type: 'estimate' | 'invoice'
   userId: string
-  documents: UploadedDoc[]
-  onUploaded?: () => void
+  onTemplateCreated?: () => void
 }
 
-const ACCEPT = '.docx,.doc,.pdf,.xlsx,.xls'
-const MAX_SIZE = 10 * 1024 * 1024 // 10 MB
+// Accept PDFs and images — Gemini can read both
+const ACCEPT = '.pdf,.png,.jpg,.jpeg,.webp,.heic,.docx,.doc'
+const MAX_SIZE = 20 * 1024 * 1024 // 20 MB
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return bytes + ' B'
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
-}
-
-function fileIcon(name: string) {
-  if (name.endsWith('.pdf')) return '📄'
-  if (name.endsWith('.docx') || name.endsWith('.doc')) return '📝'
-  if (name.endsWith('.xlsx') || name.endsWith('.xls')) return '📊'
-  return '📎'
-}
-
-export function DocumentUploader({ type, userId, documents, onUploaded }: Props) {
-  const [uploading, setUploading] = useState(false)
-  const [progress, setProgress] = useState(0)
+export function DocumentUploader({ type, userId, onTemplateCreated }: Props) {
+  const [processing, setProcessing] = useState(false)
+  const [status, setStatus] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
   const handleUpload = async (file: File) => {
     if (file.size > MAX_SIZE) {
-      setError('File too large (max 10 MB)')
+      setError('File too large (max 20 MB)')
       return
     }
 
-    setUploading(true)
-    setProgress(0)
+    setProcessing(true)
     setError('')
     setSuccess('')
+    setStatus('Reading document with AI...')
 
     try {
-      const timestamp = Date.now()
-      const storagePath = `templates/${type}/${timestamp}_${file.name}`
-      const storageRef = ref(storage, storagePath)
+      // Step 1: AI extraction
+      const result = await extractTemplateFromDocument(file, type)
 
-      const uploadTask = uploadBytesResumable(storageRef, file)
+      if (result.error || !result.data) {
+        throw new Error(result.error || 'Could not extract template data from this document')
+      }
 
-      await new Promise<void>((resolve, reject) => {
-        uploadTask.on(
-          'state_changed',
-          (snap) => setProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)),
-          (err) => reject(err),
-          () => resolve()
-        )
-      })
+      setStatus('Creating template...')
 
-      const url = await getDownloadURL(storageRef)
+      // Step 2: Save as template
+      if (type === 'estimate') {
+        const tmpl = result.data as ExtractedEstimateTemplate
+        await addItem('estimateTemplates', {
+          name: tmpl.name || `Imported from ${file.name}`,
+          lineItems: tmpl.lineItems || [],
+          createdBy: userId,
+          source: 'ai-upload',
+          sourceFileName: file.name,
+        })
+      } else {
+        const tmpl = result.data as ExtractedInvoiceTemplate
+        await addItem('invoiceTemplates', {
+          name: tmpl.name || `Imported from ${file.name}`,
+          jobType: tmpl.jobType || 'other',
+          companyHeaderText: tmpl.companyHeaderText || 'R. L. Addlesberger Roofing LLC',
+          servicesPerformedText: tmpl.servicesPerformedText || '',
+          warrantyText: tmpl.warrantyText || '',
+          paymentInstructions: tmpl.paymentInstructions || 'Please make check payable to R. L. Addlesberger Roofing LLC',
+          thankYouText: tmpl.thankYouText || 'Thank you for your business!',
+          licenseText: tmpl.licenseText || 'PA141502',
+          active: true,
+          createdBy: userId,
+          source: 'ai-upload',
+          sourceFileName: file.name,
+        })
+      }
 
-      await addItem('documentTemplates', {
-        name: file.name.replace(/\.[^.]+$/, ''),
-        fileName: file.name,
-        url,
-        type,
-        fileType: file.type || file.name.split('.').pop() || 'unknown',
-        fileSize: file.size,
-        uploadedBy: userId,
-      })
-
-      setSuccess(`"${file.name}" uploaded`)
-      setTimeout(() => setSuccess(''), 3000)
-      onUploaded?.()
+      setSuccess(`✅ Template created from "${file.name}"`)
+      setTimeout(() => setSuccess(''), 5000)
+      onTemplateCreated?.()
     } catch (err: any) {
-      setError(err.message || 'Upload failed')
+      setError(err.message || 'Failed to process document')
     } finally {
-      setUploading(false)
-      setProgress(0)
+      setProcessing(false)
+      setStatus('')
       if (inputRef.current) inputRef.current.value = ''
     }
   }
@@ -108,15 +92,16 @@ export function DocumentUploader({ type, userId, documents, onUploaded }: Props)
     <div>
       {/* Upload zone */}
       <div
-        onClick={() => !uploading && inputRef.current?.click()}
+        onClick={() => !processing && inputRef.current?.click()}
         style={{
-          border: '2px dashed var(--border)',
+          border: '2px dashed var(--brand)',
           borderRadius: 'var(--radius-lg)',
-          padding: '24px 16px',
+          padding: '28px 20px',
           textAlign: 'center',
-          cursor: uploading ? 'wait' : 'pointer',
-          background: 'var(--bg-tinted)',
-          transition: 'all .15s ease',
+          cursor: processing ? 'wait' : 'pointer',
+          background: processing ? 'var(--bg-tinted)' : 'linear-gradient(135deg, var(--brand-subtle) 0%, var(--bg-tinted) 100%)',
+          transition: 'all .2s ease',
+          opacity: processing ? 0.8 : 1,
         }}
       >
         <input
@@ -126,31 +111,31 @@ export function DocumentUploader({ type, userId, documents, onUploaded }: Props)
           onChange={onFileChange}
           style={{ display: 'none' }}
         />
-        {uploading ? (
+        {processing ? (
           <div>
-            <div style={{
-              width: '100%', height: 6, borderRadius: 3,
-              background: 'var(--border-light)', overflow: 'hidden',
-              marginBottom: 8,
-            }}>
-              <div style={{
-                height: '100%', width: `${progress}%`,
-                background: 'linear-gradient(90deg, var(--brand), var(--brand-light))',
-                borderRadius: 3, transition: 'width .2s ease',
-              }} />
-            </div>
-            <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)', fontWeight: 600 }}>
-              Uploading... {progress}%
+            <Loader2 size={28} style={{ color: 'var(--brand)', marginBottom: 8, animation: 'spin 1s linear infinite' }} />
+            <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>
+              {status}
+            </p>
+            <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>
+              Gemini is reading your document...
             </p>
           </div>
         ) : (
           <>
-            <Upload size={28} style={{ color: 'var(--brand)', marginBottom: 8 }} />
-            <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>
-              Upload {label} Template
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 8 }}>
+              <Sparkles size={22} style={{ color: 'var(--brand)' }} />
+              <Upload size={22} style={{ color: 'var(--brand)' }} />
+            </div>
+            <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>
+              Upload {label} — AI Creates Template
             </p>
-            <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>
-              .docx, .doc, .pdf, .xlsx — max 10 MB
+            <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
+              Upload a PDF, photo, or document of an existing {label.toLowerCase()}.<br />
+              AI will extract the content and auto-create a reusable template.
+            </p>
+            <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--muted)', fontWeight: 500, letterSpacing: '.02em' }}>
+              .pdf · .docx · .png · .jpg — max 20 MB
             </p>
           </>
         )}
@@ -161,10 +146,10 @@ export function DocumentUploader({ type, userId, documents, onUploaded }: Props)
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8,
           padding: '10px 14px', borderRadius: 8, marginTop: 10,
-          background: 'var(--danger-bg)', color: 'var(--danger)', fontSize: 13, fontWeight: 500,
+          background: 'var(--danger-bg, #fef2f2)', color: 'var(--danger, #dc2626)', fontSize: 13, fontWeight: 500,
         }}>
           <AlertCircle size={16} /> {error}
-          <button onClick={() => setError('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)' }}>
+          <button onClick={() => setError('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger, #dc2626)' }}>
             <X size={14} />
           </button>
         </div>
@@ -173,40 +158,9 @@ export function DocumentUploader({ type, userId, documents, onUploaded }: Props)
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8,
           padding: '10px 14px', borderRadius: 8, marginTop: 10,
-          background: 'var(--success-bg)', color: 'var(--success)', fontSize: 13, fontWeight: 500,
+          background: 'var(--success-bg, #f0fdf4)', color: 'var(--success, #16a34a)', fontSize: 13, fontWeight: 600,
         }}>
           <CheckCircle2 size={16} /> {success}
-        </div>
-      )}
-
-      {/* Uploaded files list */}
-      {documents.length > 0 && (
-        <div className="stack stack-sm" style={{ marginTop: 12 }}>
-          {documents.map(doc => (
-            <a
-              key={doc.id}
-              href={doc.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="card card-pressable"
-              style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none', color: 'inherit' }}
-            >
-              <div style={{
-                width: 40, height: 40, borderRadius: 10,
-                background: 'var(--brand-subtle)', display: 'flex',
-                alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0,
-              }}>
-                {fileIcon(doc.fileName)}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }} className="truncate">{doc.name}</p>
-                <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--muted)' }}>
-                  {doc.fileName} · {formatBytes(doc.fileSize)}
-                </p>
-              </div>
-              <FileText size={16} style={{ color: 'var(--muted)', flexShrink: 0 }} />
-            </a>
-          ))}
         </div>
       )}
     </div>

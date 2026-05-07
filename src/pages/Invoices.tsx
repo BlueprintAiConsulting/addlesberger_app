@@ -1,5 +1,5 @@
 import { useState, FormEvent, useRef } from 'react'
-import { orderBy, where, Timestamp } from 'firebase/firestore'
+import { orderBy, Timestamp } from 'firebase/firestore'
 import { format } from 'date-fns'
 import { Plus, FileText, Copy, Trash2, Printer, Eye, ArrowLeft, Download, Mail } from 'lucide-react'
 import { downloadInvoicePDF, emailInvoice } from '@/lib/invoicePdf'
@@ -53,7 +53,7 @@ export function Invoices() {
   const { data: invoices } = useCollection<Invoice>('invoices', [orderBy('createdAt', 'desc')])
   const { data: invoiceTemplates } = useCollection<InvoiceTemplate>('invoiceTemplates', [orderBy('createdAt', 'desc')])
   const { data: jobs } = useCollection<Job>('jobs', [orderBy('createdAt', 'desc')])
-  const { data: uploadedDocs } = useCollection<any>('documentTemplates', [where('type', '==', 'invoice'), orderBy('createdAt', 'desc')])
+
 
   // --- Seed defaults ---
   const seedDefaults = async () => {
@@ -359,8 +359,8 @@ export function Invoices() {
         <div className="stack stack-md">
           {/* Document uploader */}
           <div>
-            <h2 className="section-heading" style={{ marginBottom: 10 }}>📎 Uploaded Templates</h2>
-            <DocumentUploader type="invoice" userId={user?.uid || ''} documents={uploadedDocs} />
+            <h2 className="section-heading" style={{ marginBottom: 10 }}>🤖 Import from Document</h2>
+            <DocumentUploader type="invoice" userId={user?.uid || ''} />
           </div>
 
           <div>

@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react'
-import { orderBy, where, Timestamp } from 'firebase/firestore'
+import { orderBy, Timestamp } from 'firebase/firestore'
 import { Plus, FileText, Copy, Edit2, Trash2 } from 'lucide-react'
 import { useCollection } from '@/hooks/useCollection'
 import { useAuth } from '@/hooks/useAuth'
@@ -34,7 +34,7 @@ export function Estimates() {
   const { data: estimates } = useCollection<Estimate>('estimates', [orderBy('createdAt', 'desc')])
   const { data: templates } = useCollection<EstimateTemplate>('estimateTemplates', [orderBy('createdAt', 'desc')])
   const { data: jobs } = useCollection<Job>('jobs', [orderBy('createdAt', 'desc')])
-  const { data: uploadedDocs } = useCollection<any>('documentTemplates', [where('type', '==', 'estimate'), orderBy('createdAt', 'desc')])
+
 
   const updateLineItem = (idx: number, field: keyof LineItem, value: string | number) => {
     const updated = [...lineItems]
@@ -168,8 +168,8 @@ export function Estimates() {
         <div className="stack stack-md">
           {/* Document uploader */}
           <div>
-            <h2 className="section-heading" style={{ marginBottom: 10 }}>📎 Uploaded Templates</h2>
-            <DocumentUploader type="estimate" userId={user?.uid || ''} documents={uploadedDocs} />
+            <h2 className="section-heading" style={{ marginBottom: 10 }}>🤖 Import from Document</h2>
+            <DocumentUploader type="estimate" userId={user?.uid || ''} />
           </div>
 
           {/* Manual templates */}
