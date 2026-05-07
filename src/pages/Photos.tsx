@@ -2,12 +2,12 @@ import { useState, useEffect, useRef, FormEvent } from 'react'
 import { orderBy, Timestamp } from 'firebase/firestore'
 import { format } from 'date-fns'
 import { useLocation } from 'react-router-dom'
-import { Camera, CheckCircle, Image as ImageIcon, Trash2, Sparkles, Loader2, ChevronDown, ChevronUp, Plus } from 'lucide-react'
+import { Camera, CheckCircle, Image as ImageIcon, Trash2, Sparkles, Loader2, ChevronDown, ChevronUp, Plus, AlertTriangle } from 'lucide-react'
 import { useCollection } from '@/hooks/useCollection'
 import { useAuth } from '@/hooks/useAuth'
 import { addItem, updateItem, deleteItem } from '@/lib/firestore'
 import { uploadPhoto, deletePhoto } from '@/lib/storage'
-import { extractWhiteboardData, type ExtractedItem } from '@/lib/whiteboardAi'
+import { extractWhiteboardData, findDuplicates, type ExtractedItem } from '@/lib/whiteboardAi'
 import { Modal } from '@/components/Modal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { EmptyState } from '@/components/EmptyState'
@@ -40,6 +40,7 @@ export function Photos() {
   const [showReview, setShowReview] = useState(false)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [acceptingAll, setAcceptingAll] = useState(false)
+  const [duplicateWarnings, setDuplicateWarnings] = useState<Map<number, string>>(new Map())
 
   useEffect(() => {
     if ((location.state as any)?.openCreate) {
@@ -129,6 +130,12 @@ export function Photos() {
       setExtractedItems(result.items)
       setExtractionSummary(result.rawSummary)
       if (result.items.length > 0) {
+        // Check for duplicates against existing board items + jobs
+        const existingNames = [
+          ...boardItems.map(b => b.title),
+          ...jobs.map(j => j.customerName),
+        ].filter(Boolean)
+        setDuplicateWarnings(findDuplicates(result.items, existingNames))
         setShowReview(true)
       } else {
         setExtractionError('No readable items found on this whiteboard.')
@@ -409,6 +416,14 @@ export function Photos() {
                   <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
                     Found {extractedItems.length} item{extractedItems.length !== 1 ? 's' : ''}. {extractionSummary}
                   </p>
+                  <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>
+                    Review each item below. Edit, remove, or accept. Low-confidence items are flagged.
+                  </p>
+                  {duplicateWarnings.size > 0 && (
+                    <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--warning)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <AlertTriangle size={13} /> {duplicateWarnings.size} possible duplicate{duplicateWarnings.size !== 1 ? 's' : ''} detected
+                    </p>
+                  )}
                 </div>
 
                 {/* Extracted items */}
@@ -424,6 +439,14 @@ export function Photos() {
                             {conf.label} confidence
                           </span>
                           {item.priority === 'urgent' && <span className="badge badge-urgent">Urgent</span>}
+                          {duplicateWarnings.has(idx) && (
+                            <span className="badge" style={{ background: '#FEF3C7', color: '#92400E', fontSize: 10, display: 'flex', alignItems: 'center', gap: 3 }}>
+                              <AlertTriangle size={10} /> {duplicateWarnings.get(idx)}
+                            </span>
+                          )}
+                          {item.confidence === 'low' && (
+                            <span style={{ fontSize: 10, color: 'var(--danger)', fontWeight: 600 }}>⚠ Needs review</span>
+                          )}
                         </div>
                         <div className="row gap-sm">
                           <button className="btn btn-ghost btn-sm" style={{ padding: 4, minHeight: 28 }} onClick={() => setEditingIndex(isEditing ? null : idx)}>
