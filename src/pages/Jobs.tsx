@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react'
-import { where, orderBy, Timestamp } from 'firebase/firestore'
+import { where, orderBy } from 'firebase/firestore'
 import { Plus, Search, Briefcase } from 'lucide-react'
 import { useCollection } from '@/hooks/useCollection'
 import { useAuth } from '@/hooks/useAuth'

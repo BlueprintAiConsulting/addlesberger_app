@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, FormEvent } from 'react'
-import { orderBy, Timestamp } from 'firebase/firestore'
+import { orderBy } from 'firebase/firestore'
 import { format } from 'date-fns'
 import { useLocation } from 'react-router-dom'
 import { Camera, CheckCircle, Image as ImageIcon, Trash2, Sparkles, Loader2, ChevronDown, ChevronUp, Plus, AlertTriangle } from 'lucide-react'
@@ -63,9 +63,9 @@ export function Photos() {
 
   // Filter logic
   let filtered = photos
-  if (filterSource !== 'all') filtered = filtered.filter(p => (p as any).source === filterSource)
-  if (filterProcessed === 'unprocessed') filtered = filtered.filter(p => !(p as any).processed)
-  if (filterProcessed === 'processed') filtered = filtered.filter(p => (p as any).processed)
+  if (filterSource !== 'all') filtered = filtered.filter(p => p.source === filterSource)
+  if (filterProcessed === 'unprocessed') filtered = filtered.filter(p => !p.processed)
+  if (filterProcessed === 'processed') filtered = filtered.filter(p => p.processed)
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -263,8 +263,8 @@ export function Photos() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 8 }}>
           {filtered.map(photo => {
-            const isWhiteboard = (photo as any).source === 'ryan-whiteboard'
-            const isProcessed = (photo as any).processed
+            const isWhiteboard = photo.source === 'ryan-whiteboard'
+            const isProcessed = photo.processed
             return (
               <div key={photo.id} onClick={() => setViewPhoto(photo)} style={{
                 cursor: 'pointer', borderRadius: 'var(--radius-sm)', overflow: 'hidden',
@@ -282,7 +282,7 @@ export function Photos() {
                 </div>
                 <div style={{ position: 'absolute', bottom: 4, left: 4 }}>
                   <span style={{ fontSize: 10, fontWeight: 600, background: 'rgba(0,0,0,0.6)', color: 'white', padding: '2px 6px', borderRadius: 4 }}>
-                    {T.PHOTO_SOURCE_LABELS[(photo as any).source as PhotoSource] || (photo as any).source || 'Photo'}
+                    {T.PHOTO_SOURCE_LABELS[photo.source as PhotoSource] || photo.source || 'Photo'}
                   </span>
                 </div>
               </div>
@@ -337,13 +337,13 @@ export function Photos() {
 
             <div className="row gap-sm" style={{ flexWrap: 'wrap' }}>
               <span className="badge" style={{ background: 'var(--bg)' }}>
-                {T.PHOTO_SOURCE_LABELS[(viewPhoto as any).source as PhotoSource] || 'Photo'}
+                {T.PHOTO_SOURCE_LABELS[viewPhoto.source as PhotoSource] || 'Photo'}
               </span>
               <span className="badge" style={{
-                background: (viewPhoto as any).processed ? '#DCFCE7' : '#FEF3C7',
-                color: (viewPhoto as any).processed ? '#166534' : '#92400E',
+                background: viewPhoto.processed ? '#DCFCE7' : '#FEF3C7',
+                color: viewPhoto.processed ? '#166534' : '#92400E',
               }}>
-                {(viewPhoto as any).processed ? '✓ Processed' : 'Needs Processed'}
+                {viewPhoto.processed ? '✓ Processed' : 'Needs Processed'}
               </span>
             </div>
 
@@ -354,7 +354,7 @@ export function Photos() {
             {/* Action buttons */}
             <div className="row gap-sm" style={{ flexWrap: 'wrap' }}>
               {/* AI Scan button — only for whiteboard photos */}
-              {(viewPhoto as any).source === 'ryan-whiteboard' && !(viewPhoto as any).processed && !showReview && (
+              {viewPhoto.source === 'ryan-whiteboard' && !viewPhoto.processed && !showReview && (
                 <button
                   className="btn btn-primary btn-sm"
                   onClick={handleScanWhiteboard}
@@ -369,7 +369,7 @@ export function Photos() {
                 </button>
               )}
 
-              {!(viewPhoto as any).processed ? (
+              {!viewPhoto.processed ? (
                 <button className="btn btn-outline btn-sm" onClick={() => markProcessed(viewPhoto)}>
                   <CheckCircle size={16} /> Mark Processed
                 </button>

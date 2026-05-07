@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, FormEvent } from 'react'
-import { where, orderBy, Timestamp } from 'firebase/firestore'
+import { orderBy, Timestamp } from 'firebase/firestore'
 import { format, isPast, isToday } from 'date-fns'
 import { Plus, Archive, Camera, Sparkles, Loader2, ChevronDown, ChevronUp, Trash2, X } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
@@ -95,7 +95,7 @@ export function Board() {
     setEditItem(item)
     setTitle(item.title); setDescription(item.description)
     setCategory(T.migrateBoardCategory(item.category) as BoardCategory)
-    setPriority(item.priority); setSource((item as any).source || 'other')
+    setPriority(item.priority); setSource(item.source || 'other')
     setStatus(T.migrateBoardStatus(item.status))
     setDueDate(item.dueDate ? new Date(item.dueDate.toDate()).toISOString().split('T')[0] : '')
     setModalOpen(true)
@@ -321,8 +321,8 @@ export function Board() {
                     </div>
                     <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: 15 }}>{item.title}</p>
                     {item.description && <p className="truncate" style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>{item.description}</p>}
-                    {(item as any).source && (item as any).source !== 'other' && (
-                      <p style={{ margin: '4px 0 0', fontSize: 11, fontWeight: 500, color: 'var(--text-secondary)' }}>📥 {T.UPDATE_SOURCE_LABELS[(item as any).source as UpdateSource] || (item as any).source}</p>
+                    {item.source && item.source !== 'other' && (
+                      <p style={{ margin: '4px 0 0', fontSize: 11, fontWeight: 500, color: 'var(--text-secondary)' }}>📥 {T.UPDATE_SOURCE_LABELS[item.source as UpdateSource] || item.source}</p>
                     )}
                     {item.dueDate && (() => {
                       const due = item.dueDate.toDate()

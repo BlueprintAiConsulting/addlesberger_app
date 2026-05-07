@@ -35,7 +35,7 @@ export function Today() {
 
   const inboxItems = boardItems.filter(b => T.migrateBoardStatus(b.status) === 'inbox')
   const urgentItems = boardItems.filter(b => b.priority === 'urgent' && T.migrateBoardStatus(b.status) !== 'completed')
-  const unprocessedPhotos = photos.filter(p => (p as any).source === 'ryan-whiteboard' && !(p as any).processed)
+  const unprocessedPhotos = photos.filter(p => p.source === 'ryan-whiteboard' && !p.processed)
   const waitingJobs = jobs.filter(j => ['lead', 'estimate-sent', 'approved'].includes(j.status))
   const needsInvoice = jobs.filter(j => j.status === 'complete' && !j.invoiceAmount)
   const activeJobs = jobs.filter(j => !['paid', 'complete', 'invoiced'].includes(j.status))
@@ -147,9 +147,9 @@ export function Today() {
                       )}
                     </div>
                     <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{item.title}</p>
-                    {(item as any).source && (item as any).source !== 'other' && (
+                    {item.source && item.source !== 'other' && (
                       <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--muted)' }}>
-                        📥 {T.UPDATE_SOURCE_LABELS[(item as any).source as T.UpdateSource] || ''}
+                        📥 {T.UPDATE_SOURCE_LABELS[item.source as T.UpdateSource] || ''}
                       </p>
                     )}
                   </div>
