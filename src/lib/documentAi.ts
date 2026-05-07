@@ -96,15 +96,149 @@ Rules:
 - Use sensible defaults for R. L. Addlesberger Roofing LLC if fields are missing
 - If you can't extract anything, still return valid JSON with the defaults`
 
+/**
+ * Extract raw text from a DOCX file (which is a ZIP of XML).
+ * Uses browser-native APIs — zero dependencies.
+ */
+async function extractDocxText(file: File): Promise<string> {
+  const arrayBuffer = await file.arrayBuffer()
+  const blob = new Blob([arrayBuffer], { type: 'application/zip' })
+
+  // DOCX = ZIP archive. We need word/document.xml
+  // Use the browser's native DecompressionStream if available, otherwise
+  // fall back to a manual ZIP parse for the document.xml entry.
+  try {
+    // Try using the JSZip-free approach: read the zip manually
+    const bytes = new Uint8Array(arrayBuffer)
+    const textDecoder = new TextDecoder()
+
+    // Find all local file headers and locate word/document.xml
+    let documentXml = ''
+    let i = 0
+    while (i < bytes.length - 4) {
+      // Local file header signature: 0x04034b50
+      if (bytes[i] === 0x50 && bytes[i + 1] === 0x4b && bytes[i + 2] === 0x03 && bytes[i + 3] === 0x04) {
+        const nameLen = bytes[i + 26] | (bytes[i + 27] << 8)
+        const extraLen = bytes[i + 28] | (bytes[i + 29] << 8)
+        const compMethod = bytes[i + 8] | (bytes[i + 9] << 8)
+        const compSize = bytes[i + 18] | (bytes[i + 19] << 8) | (bytes[i + 20] << 16) | (bytes[i + 21] << 24)
+        const uncompSize = bytes[i + 22] | (bytes[i + 23] << 8) | (bytes[i + 24] << 16) | (bytes[i + 25] << 24)
+
+        const nameStart = i + 30
+        const fileName = textDecoder.decode(bytes.slice(nameStart, nameStart + nameLen))
+        const dataStart = nameStart + nameLen + extraLen
+
+        if (fileName === 'word/document.xml' && compMethod === 0) {
+          // Stored (not compressed) — read directly
+          documentXml = textDecoder.decode(bytes.slice(dataStart, dataStart + uncompSize))
+          break
+        } else if (fileName === 'word/document.xml' && compMethod === 8) {
+          // Deflate compressed — use DecompressionStream
+          const compressed = bytes.slice(dataStart, dataStart + compSize)
+          const ds = new DecompressionStream('deflate-raw')
+          const writer = ds.writable.getWriter()
+          writer.write(compressed)
+          writer.close()
+          const reader = ds.readable.getReader()
+          const chunks: Uint8Array[] = []
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            chunks.push(value)
+          }
+          const total = chunks.reduce((s, c) => s + c.length, 0)
+          const result = new Uint8Array(total)
+          let offset = 0
+          for (const chunk of chunks) {
+            result.set(chunk, offset)
+            offset += chunk.length
+          }
+          documentXml = textDecoder.decode(result)
+          break
+        }
+
+        i = dataStart + (compMethod === 0 ? uncompSize : compSize)
+      } else {
+        i++
+      }
+    }
+
+    if (!documentXml) {
+      throw new Error('Could not find word/document.xml in DOCX file')
+    }
+
+    // Parse XML and extract text content
+    const parser = new DOMParser()
+    const xmlDoc = parser.parseFromString(documentXml, 'application/xml')
+
+    // Get all text nodes from w:t elements
+    const textNodes = xmlDoc.getElementsByTagNameNS(
+      'http://schemas.openxmlformats.org/wordprocessingml/2006/main', 't'
+    )
+
+    const paragraphs: string[] = []
+    let currentParagraph = ''
+    let lastParent: Element | null = null
+
+    for (let j = 0; j < textNodes.length; j++) {
+      const node = textNodes[j]
+      const text = node.textContent || ''
+      // Check if we're in a new paragraph (w:p)
+      const pNode = node.closest('*|p') || node.parentElement?.closest('*|p')
+      if (pNode !== lastParent && currentParagraph) {
+        paragraphs.push(currentParagraph)
+        currentParagraph = ''
+      }
+      lastParent = pNode as Element
+      currentParagraph += text
+    }
+    if (currentParagraph) paragraphs.push(currentParagraph)
+
+    return paragraphs.join('\n')
+  } catch (err) {
+    console.warn('DOCX parse failed, sending raw to Gemini:', err)
+    return ''
+  }
+}
+
+function isDocx(file: File): boolean {
+  return file.name.toLowerCase().endsWith('.docx') || file.name.toLowerCase().endsWith('.doc') ||
+    file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+}
+
 export async function extractTemplateFromDocument(
   file: File,
   type: 'estimate' | 'invoice'
 ): Promise<ExtractionResult<ExtractedEstimateTemplate | ExtractedInvoiceTemplate>> {
   try {
     const apiKey = getApiKey()
-    const { base64, mimeType } = await fileToBase64(file)
-
     const prompt = type === 'estimate' ? ESTIMATE_PROMPT : INVOICE_PROMPT
+
+    let parts: any[]
+
+    if (isDocx(file)) {
+      // DOCX: extract text client-side, send as text prompt
+      const docText = await extractDocxText(file)
+      if (!docText) {
+        // Fallback: send as binary and let Gemini try
+        const { base64, mimeType } = await fileToBase64(file)
+        parts = [
+          { text: prompt },
+          { inlineData: { mimeType, data: base64 } },
+        ]
+      } else {
+        parts = [
+          { text: `${prompt}\n\n--- DOCUMENT CONTENT ---\n${docText}\n--- END DOCUMENT ---` },
+        ]
+      }
+    } else {
+      // PDF/image: send as binary inline data
+      const { base64, mimeType } = await fileToBase64(file)
+      parts = [
+        { text: prompt },
+        { inlineData: { mimeType, data: base64 } },
+      ]
+    }
 
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
@@ -112,12 +246,7 @@ export async function extractTemplateFromDocument(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: prompt },
-              { inlineData: { mimeType, data: base64 } },
-            ],
-          }],
+          contents: [{ parts }],
         }),
       }
     )
