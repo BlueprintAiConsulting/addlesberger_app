@@ -2,14 +2,15 @@
   "name": "R. L. Addlesberger Roofing",
   "short_name": "RL Roofing",
   "description": "Job management for R. L. Addlesberger Roofing",
-  "start_url": "/",
+  "start_url": "/addlesberger_app/",
+  "scope": "/addlesberger_app/",
   "display": "standalone",
   "background_color": "#222222",
   "theme_color": "#222222",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icon-192.svg",
+      "src": "/addlesberger_app/icon-192.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
