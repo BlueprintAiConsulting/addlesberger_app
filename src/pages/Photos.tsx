@@ -34,6 +34,8 @@ export function Photos() {
 
   // AI extraction state
   const [scanning, setScanning] = useState(false)
+  const [scanProgress, setScanProgress] = useState(0)
+  const [scanStep, setScanStep] = useState('')
   const [extractedItems, setExtractedItems] = useState<ExtractedItem[]>([])
   const [extractionSummary, setExtractionSummary] = useState('')
   const [extractionError, setExtractionError] = useState('')
@@ -118,17 +120,21 @@ export function Photos() {
   const handleScanWhiteboard = async () => {
     if (!viewPhoto) return
     setScanning(true)
+    setScanProgress(0)
+    setScanStep('Starting...')
     setExtractionError('')
     setExtractedItems([])
     setExtractionSummary('')
 
     try {
-      // Safety timeout — if extraction takes > 60s something is wrong
       const timeoutPromise = new Promise<ExtractionResult>((_, reject) =>
         setTimeout(() => reject(new Error('Scan timed out after 60 seconds. Try a smaller or clearer photo.')), 60000)
       )
       const result = await Promise.race([
-        extractWhiteboardData(viewPhoto.url, viewPhoto.caption),
+        extractWhiteboardData(viewPhoto.url, viewPhoto.caption, (step, pct) => {
+          setScanStep(step)
+          setScanProgress(pct)
+        }),
         timeoutPromise,
       ])
 
@@ -138,7 +144,6 @@ export function Photos() {
         setExtractedItems(result.items)
         setExtractionSummary(result.rawSummary)
         if (result.items.length > 0) {
-          // Check for duplicates against existing board items + jobs
           const existingNames = [
             ...boardItems.map(b => b.title),
             ...jobs.map(j => j.customerName),
@@ -153,6 +158,8 @@ export function Photos() {
       setExtractionError(err.message || 'Extraction failed unexpectedly. Please try again.')
     }
     setScanning(false)
+    setScanProgress(0)
+    setScanStep('')
   }
 
   const updateExtractedItem = (index: number, field: keyof ExtractedItem, value: any) => {
@@ -365,34 +372,63 @@ export function Photos() {
             {/* Action buttons */}
             <div className="row gap-sm" style={{ flexWrap: 'wrap' }}>
               {/* AI Scan button — only for whiteboard photos */}
-              {viewPhoto.source === 'ryan-whiteboard' && !viewPhoto.processed && !showReview && (
+              {viewPhoto.source === 'ryan-whiteboard' && !viewPhoto.processed && !showReview && !scanning && (
                 <button
                   className="btn btn-primary btn-sm"
                   onClick={handleScanWhiteboard}
-                  disabled={scanning}
                   style={{ background: 'linear-gradient(135deg, #7C3AED, #9333EA)', border: 'none' }}
                 >
-                  {scanning ? (
-                    <><Loader2 size={16} style={{ animation: 'spin .7s linear infinite' }} /> Scanning...</>
-                  ) : (
-                    <><Sparkles size={16} /> Scan Whiteboard</>
-                  )}
+                  <Sparkles size={16} /> Scan Whiteboard
                 </button>
               )}
 
               {!viewPhoto.processed ? (
-                <button className="btn btn-outline btn-sm" onClick={() => markProcessed(viewPhoto)}>
+                <button className="btn btn-outline btn-sm" onClick={() => markProcessed(viewPhoto)} disabled={scanning}>
                   <CheckCircle size={16} /> Mark Processed
                 </button>
               ) : (
-                <button className="btn btn-outline btn-sm" onClick={() => markUnprocessed(viewPhoto)}>
+                <button className="btn btn-outline btn-sm" onClick={() => markUnprocessed(viewPhoto)} disabled={scanning}>
                   Undo Processed
                 </button>
               )}
-              <button className="btn btn-danger btn-sm" onClick={() => { closeViewModal(); setDeleteTarget(viewPhoto) }}>
+              <button className="btn btn-danger btn-sm" onClick={() => { closeViewModal(); setDeleteTarget(viewPhoto) }} disabled={scanning}>
                 <Trash2 size={16} /> Delete
               </button>
             </div>
+
+            {/* ─── Scan Progress Bar ─────────────────────────── */}
+            {scanning && (
+              <div style={{
+                padding: '16px',
+                borderRadius: 'var(--radius-sm)',
+                background: 'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(147,51,234,0.08))',
+                border: '1px solid rgba(124,58,237,0.2)',
+              }}>
+                <div className="row gap-sm" style={{ marginBottom: 8, alignItems: 'center' }}>
+                  <Loader2 size={16} style={{ animation: 'spin .7s linear infinite', color: '#9333EA' }} />
+                  <span style={{ fontSize: 14, fontWeight: 600, color: '#9333EA' }}>{scanStep || 'Starting...'}</span>
+                  <span style={{ marginLeft: 'auto', fontSize: 13, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
+                    {scanProgress}%
+                  </span>
+                </div>
+                <div style={{
+                  width: '100%',
+                  height: 8,
+                  borderRadius: 999,
+                  background: 'rgba(124,58,237,0.12)',
+                  overflow: 'hidden',
+                }}>
+                  <div style={{
+                    width: `${scanProgress}%`,
+                    height: '100%',
+                    borderRadius: 999,
+                    background: 'linear-gradient(90deg, #7C3AED, #9333EA, #A855F7)',
+                    transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                    boxShadow: '0 0 8px rgba(147,51,234,0.4)',
+                  }} />
+                </div>
+              </div>
+            )}
 
             {/* Extraction error */}
             {extractionError && (

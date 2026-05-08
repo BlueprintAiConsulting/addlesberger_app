@@ -246,17 +246,26 @@ const GEMINI_MODELS = [
 ]
 
 // ─── Main Extraction ─────────────────────────────────────
-export async function extractWhiteboardData(imageUrl: string, userNotes?: string): Promise<ExtractionResult> {
+export type ProgressCallback = (step: string, percent: number) => void
+
+export async function extractWhiteboardData(
+  imageUrl: string,
+  userNotes?: string,
+  onProgress?: ProgressCallback,
+): Promise<ExtractionResult> {
   try {
+    onProgress?.('Checking configuration...', 5)
     const apiKey = getApiKey()
 
     // Step 1: Convert image to base64
+    onProgress?.('Loading image...', 10)
     let base64Data: { base64: string; mimeType: string }
     try {
       base64Data = await imageUrlToBase64(imageUrl)
     } catch (imgErr: any) {
       return { items: [], rawSummary: '', error: `Failed to load image: ${imgErr.message}` }
     }
+    onProgress?.('Image loaded', 25)
 
     // Validate base64 isn't empty
     if (!base64Data.base64 || base64Data.base64.length < 100) {
@@ -269,9 +278,12 @@ export async function extractWhiteboardData(imageUrl: string, userNotes?: string
     }
 
     // Step 2: Try each Gemini model until one works
+    onProgress?.('Sending to AI...', 35)
     let lastError = ''
-    for (const model of GEMINI_MODELS) {
+    for (let mi = 0; mi < GEMINI_MODELS.length; mi++) {
+      const model = GEMINI_MODELS[mi]
       try {
+        onProgress?.(`Analyzing with ${model}...`, 40 + mi * 10)
         const res = await fetchWithRetry(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
           {
@@ -285,13 +297,11 @@ export async function extractWhiteboardData(imageUrl: string, userNotes?: string
         )
 
         if (res.status === 404 || res.status === 400) {
-          // Model not available — try next
           const errBody = await res.text()
           if (errBody.includes('not found') || errBody.includes('not supported') || errBody.includes('does not exist')) {
             lastError = `Model ${model} not available`
             continue
           }
-          // Other 400 error — surface it
           throw new Error(`Gemini API error (${res.status}): ${errBody.slice(0, 200)}`)
         }
 
@@ -300,30 +310,30 @@ export async function extractWhiteboardData(imageUrl: string, userNotes?: string
           throw new Error(`Gemini API error (${res.status}): ${errText.slice(0, 200)}`)
         }
 
+        onProgress?.('Reading AI response...', 75)
         const data = await res.json()
 
-        // Check for blocked content / safety filters
         if (data.candidates?.[0]?.finishReason === 'SAFETY') {
           return { items: [], rawSummary: '', error: 'Image was blocked by safety filters. Try a different photo.' }
         }
 
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
         if (!text.trim()) {
-          // Empty response — might work with different model
           lastError = `Model ${model} returned empty response`
           continue
         }
 
         // Step 3: Parse the response
+        onProgress?.('Extracting job data...', 85)
         const parsed = robustJsonParse(text)
         const items = (parsed.items || []).map(normalizeItem).filter((i: ExtractedItem) =>
           i.customerName || i.address || i.description || i.phone
         )
 
+        onProgress?.('Done!', 100)
         return { items, rawSummary: parsed.summary || '' }
       } catch (modelErr: any) {
         lastError = modelErr.message
-        // If it's a network/timeout error, don't try other models
         if (modelErr.message?.includes('timed out') || modelErr.message?.includes('Network')) {
           throw modelErr
         }
@@ -331,7 +341,6 @@ export async function extractWhiteboardData(imageUrl: string, userNotes?: string
       }
     }
 
-    // All models failed
     throw new Error(lastError || 'All AI models failed. Please try again.')
   } catch (err: any) {
     console.error('Whiteboard extraction failed:', err)
