@@ -47,47 +47,117 @@ If nothing readable: { "summary": "Could not extract readable information.", "it
 
 Be generous — better to extract something imperfect that can be edited than to miss information.`
 
+// ─── API Key ────────────────────────────────────────────
 function getApiKey(): string {
-  const key = import.meta.env.VITE_GEMINI_API_KEY
-  if (!key) throw new Error('VITE_GEMINI_API_KEY is not configured.')
+  const key = (import.meta.env.VITE_GEMINI_API_KEY || '').trim()
+  if (!key) throw new Error('Gemini API key is not configured. Contact your administrator.')
   return key
 }
 
+// ─── Image → Base64 (handles CORS gracefully) ──────────
 async function imageUrlToBase64(url: string): Promise<{ base64: string; mimeType: string }> {
-  const response = await fetch(url)
-  const blob = await response.blob()
-  const mimeType = blob.type || 'image/jpeg'
+  // Try 1: Direct fetch (works when same-origin or CORS-enabled)
+  try {
+    const response = await fetch(url)
+    if (response.ok) {
+      const blob = await response.blob()
+      const mimeType = blob.type || 'image/jpeg'
+      return await blobToBase64(blob, mimeType)
+    }
+  } catch {
+    // CORS or network error — fall through to proxy approach
+  }
+
+  // Try 2: Fetch via no-cors mode and create an image element to draw to canvas
+  // This handles Firebase Storage URLs that may have CORS issues on GitHub Pages
+  try {
+    return await canvasBase64Fallback(url)
+  } catch {
+    // Last resort — if even canvas fails, throw descriptive error
+  }
+
+  throw new Error('Could not load the photo. The image may have expired — try re-uploading it.')
+}
+
+function blobToBase64(blob: Blob, mimeType: string): Promise<{ base64: string; mimeType: string }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onloadend = () => {
       const dataUrl = reader.result as string
-      resolve({ base64: dataUrl.split(',')[1], mimeType })
+      const base64 = dataUrl.split(',')[1]
+      if (!base64) { reject(new Error('Failed to encode image')); return }
+      resolve({ base64, mimeType })
     }
-    reader.onerror = reject
+    reader.onerror = () => reject(new Error('Failed to read image file'))
     reader.readAsDataURL(blob)
+  })
+}
+
+function canvasBase64Fallback(url: string): Promise<{ base64: string; mimeType: string }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth
+        canvas.height = img.naturalHeight
+        const ctx = canvas.getContext('2d')
+        if (!ctx) { reject(new Error('Canvas not supported')); return }
+        ctx.drawImage(img, 0, 0)
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.92)
+        const base64 = dataUrl.split(',')[1]
+        if (!base64) { reject(new Error('Canvas export failed')); return }
+        resolve({ base64, mimeType: 'image/jpeg' })
+      } catch (err) {
+        reject(err)
+      }
+    }
+    img.onerror = () => reject(new Error('Image failed to load'))
+    // Timeout after 15s
+    setTimeout(() => reject(new Error('Image load timed out')), 15000)
+    img.src = url
   })
 }
 
 // ─── Robust JSON Parser ─────────────────────────────────
 function robustJsonParse(text: string): any {
-  // 1: Strip markdown fences
-  let cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+  // Strategy 1: Strip markdown fences and parse
+  const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
   try { return JSON.parse(cleaned) } catch { /* next */ }
 
-  // 2: Extract first JSON object
+  // Strategy 2: Extract first JSON object via regex
   const m = text.match(/\{[\s\S]*\}/)
   if (m) { try { return JSON.parse(m[0]) } catch { /* next */ } }
 
-  // 3: Fix trailing commas + single quotes
+  // Strategy 3: Fix common AI quirks — trailing commas, single quotes
   try {
-    return JSON.parse(cleaned.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']').replace(/'/g, '"'))
+    const fixed = cleaned
+      .replace(/,\s*}/g, '}')
+      .replace(/,\s*]/g, ']')
+      .replace(/'/g, '"')
+      .replace(/\n/g, ' ')
+    return JSON.parse(fixed)
   } catch { /* next */ }
 
-  // 4: Extract items array if outer object broken
+  // Strategy 4: Extract just the items array if the outer object is broken
   const im = text.match(/"items"\s*:\s*\[([\s\S]*)\]/)
-  if (im) { try { return { summary: 'Partial extraction', items: JSON.parse(`[${im[1]}]`) } } catch { /* next */ } }
+  if (im) {
+    try {
+      const arrText = `[${im[1]}]`
+        .replace(/,\s*]/g, ']')
+        .replace(/'/g, '"')
+      return { summary: 'Partial extraction', items: JSON.parse(arrText) }
+    } catch { /* next */ }
+  }
 
-  throw new Error('Could not parse AI response. The image may be too blurry.')
+  // Strategy 5: Try to find any array of objects
+  const arrMatch = text.match(/\[\s*\{[\s\S]*\}\s*\]/)
+  if (arrMatch) {
+    try { return { summary: 'Extracted from array', items: JSON.parse(arrMatch[0]) } } catch { /* next */ }
+  }
+
+  throw new Error('Could not parse AI response. The image may be too blurry or dark.')
 }
 
 // ─── Retry with Backoff ──────────────────────────────────
@@ -95,7 +165,12 @@ async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 2)
   let lastErr: Error | null = null
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const res = await fetch(url, options)
+      // Add timeout via AbortController
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
+      const res = await fetch(url, { ...options, signal: controller.signal })
+      clearTimeout(timeoutId)
+
       if (res.ok || res.status === 400) return res
       if (attempt < maxRetries && [429, 500, 503].includes(res.status)) {
         await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000 + Math.random() * 500))
@@ -104,6 +179,9 @@ async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 2)
       return res
     } catch (err: any) {
       lastErr = err
+      if (err.name === 'AbortError') {
+        lastErr = new Error('Request timed out (30s). The image may be too large — try a smaller photo.')
+      }
       if (attempt < maxRetries) await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000))
     }
   }
@@ -112,13 +190,20 @@ async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 2)
 
 // ─── Normalize Extracted Item ────────────────────────────
 function normalizeItem(item: any): ExtractedItem {
+  // Phone normalization
   let phone = (item.phone || '').replace(/[^\d]/g, '')
   if (phone.length === 10) phone = `${phone.slice(0,3)}-${phone.slice(3,6)}-${phone.slice(6)}`
   else if (phone.length === 11 && phone.startsWith('1')) phone = `${phone.slice(1,4)}-${phone.slice(4,7)}-${phone.slice(7)}`
   else phone = item.phone || ''
 
+  // Estimate normalization — handles "$5k", "5,000", "5000", etc.
   let estimateAmount: number | null = null
-  if (item.estimateAmount != null) { const n = Number(item.estimateAmount); if (!isNaN(n) && n > 0) estimateAmount = n }
+  if (item.estimateAmount != null) {
+    let raw = String(item.estimateAmount).replace(/[$,]/g, '').trim()
+    if (/^\d+(\.\d+)?k$/i.test(raw)) { raw = String(parseFloat(raw) * 1000) }
+    const n = Number(raw)
+    if (!isNaN(n) && n > 0) estimateAmount = n
+  }
 
   const validTypes = ['shingle','rubber roof','metal roof','repair','gutter','flashing','inspection','other']
   return {
@@ -152,41 +237,102 @@ export function findDuplicates(newItems: ExtractedItem[], existingNames: string[
   return dupes
 }
 
+// ─── Gemini Model Selection ─────────────────────────────
+// Try multiple models in case one is unavailable for the API key
+const GEMINI_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+]
+
 // ─── Main Extraction ─────────────────────────────────────
 export async function extractWhiteboardData(imageUrl: string, userNotes?: string): Promise<ExtractionResult> {
   try {
     const apiKey = getApiKey()
-    const { base64, mimeType } = await imageUrlToBase64(imageUrl)
+
+    // Step 1: Convert image to base64
+    let base64Data: { base64: string; mimeType: string }
+    try {
+      base64Data = await imageUrlToBase64(imageUrl)
+    } catch (imgErr: any) {
+      return { items: [], rawSummary: '', error: `Failed to load image: ${imgErr.message}` }
+    }
+
+    // Validate base64 isn't empty
+    if (!base64Data.base64 || base64Data.base64.length < 100) {
+      return { items: [], rawSummary: '', error: 'Image appears to be empty or corrupted. Try re-uploading.' }
+    }
 
     let prompt = EXTRACTION_PROMPT
     if (userNotes?.trim()) {
       prompt += `\n\nADDITIONAL CONTEXT FROM USER:\n"${userNotes.trim()}"\n\nUse these notes to guide extraction.`
     }
 
-    const res = await fetchWithRetry(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType, data: base64 } }] }],
-          generationConfig: { temperature: 0.1, maxOutputTokens: 4096 },
-        }),
+    // Step 2: Try each Gemini model until one works
+    let lastError = ''
+    for (const model of GEMINI_MODELS) {
+      try {
+        const res = await fetchWithRetry(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: base64Data.mimeType, data: base64Data.base64 } }] }],
+              generationConfig: { temperature: 0.1, maxOutputTokens: 4096 },
+            }),
+          }
+        )
+
+        if (res.status === 404 || res.status === 400) {
+          // Model not available — try next
+          const errBody = await res.text()
+          if (errBody.includes('not found') || errBody.includes('not supported') || errBody.includes('does not exist')) {
+            lastError = `Model ${model} not available`
+            continue
+          }
+          // Other 400 error — surface it
+          throw new Error(`Gemini API error (${res.status}): ${errBody.slice(0, 200)}`)
+        }
+
+        if (!res.ok) {
+          const errText = await res.text()
+          throw new Error(`Gemini API error (${res.status}): ${errText.slice(0, 200)}`)
+        }
+
+        const data = await res.json()
+
+        // Check for blocked content / safety filters
+        if (data.candidates?.[0]?.finishReason === 'SAFETY') {
+          return { items: [], rawSummary: '', error: 'Image was blocked by safety filters. Try a different photo.' }
+        }
+
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+        if (!text.trim()) {
+          // Empty response — might work with different model
+          lastError = `Model ${model} returned empty response`
+          continue
+        }
+
+        // Step 3: Parse the response
+        const parsed = robustJsonParse(text)
+        const items = (parsed.items || []).map(normalizeItem).filter((i: ExtractedItem) =>
+          i.customerName || i.address || i.description || i.phone
+        )
+
+        return { items, rawSummary: parsed.summary || '' }
+      } catch (modelErr: any) {
+        lastError = modelErr.message
+        // If it's a network/timeout error, don't try other models
+        if (modelErr.message?.includes('timed out') || modelErr.message?.includes('Network')) {
+          throw modelErr
+        }
+        continue
       }
-    )
+    }
 
-    if (!res.ok) { const err = await res.text(); throw new Error(`Gemini API error (${res.status}): ${err}`) }
-
-    const data = await res.json()
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
-    if (!text.trim()) return { items: [], rawSummary: '', error: 'AI returned empty response. Image may be too blurry or dark.' }
-
-    const parsed = robustJsonParse(text)
-    const items = (parsed.items || []).map(normalizeItem).filter((i: ExtractedItem) =>
-      i.customerName || i.address || i.description || i.phone
-    )
-
-    return { items, rawSummary: parsed.summary || '' }
+    // All models failed
+    throw new Error(lastError || 'All AI models failed. Please try again.')
   } catch (err: any) {
     console.error('Whiteboard extraction failed:', err)
     return { items: [], rawSummary: '', error: err.message || 'Extraction failed. Please try again.' }

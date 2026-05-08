@@ -7,7 +7,7 @@ import { useCollection } from '@/hooks/useCollection'
 import { useAuth } from '@/hooks/useAuth'
 import { addItem, updateItem, deleteItem } from '@/lib/firestore'
 import { uploadPhoto, deletePhoto } from '@/lib/storage'
-import { extractWhiteboardData, findDuplicates, type ExtractedItem } from '@/lib/whiteboardAi'
+import { extractWhiteboardData, findDuplicates, type ExtractedItem, type ExtractionResult } from '@/lib/whiteboardAi'
 import { Modal } from '@/components/Modal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { EmptyState } from '@/components/EmptyState'
@@ -122,24 +122,35 @@ export function Photos() {
     setExtractedItems([])
     setExtractionSummary('')
 
-    const result = await extractWhiteboardData(viewPhoto.url, viewPhoto.caption)
+    try {
+      // Safety timeout — if extraction takes > 60s something is wrong
+      const timeoutPromise = new Promise<ExtractionResult>((_, reject) =>
+        setTimeout(() => reject(new Error('Scan timed out after 60 seconds. Try a smaller or clearer photo.')), 60000)
+      )
+      const result = await Promise.race([
+        extractWhiteboardData(viewPhoto.url, viewPhoto.caption),
+        timeoutPromise,
+      ])
 
-    if (result.error) {
-      setExtractionError(result.error)
-    } else {
-      setExtractedItems(result.items)
-      setExtractionSummary(result.rawSummary)
-      if (result.items.length > 0) {
-        // Check for duplicates against existing board items + jobs
-        const existingNames = [
-          ...boardItems.map(b => b.title),
-          ...jobs.map(j => j.customerName),
-        ].filter(Boolean)
-        setDuplicateWarnings(findDuplicates(result.items, existingNames))
-        setShowReview(true)
+      if (result.error) {
+        setExtractionError(result.error)
       } else {
-        setExtractionError('No readable items found on this whiteboard.')
+        setExtractedItems(result.items)
+        setExtractionSummary(result.rawSummary)
+        if (result.items.length > 0) {
+          // Check for duplicates against existing board items + jobs
+          const existingNames = [
+            ...boardItems.map(b => b.title),
+            ...jobs.map(j => j.customerName),
+          ].filter(Boolean)
+          setDuplicateWarnings(findDuplicates(result.items, existingNames))
+          setShowReview(true)
+        } else {
+          setExtractionError('No readable items found on this whiteboard.')
+        }
       }
+    } catch (err: any) {
+      setExtractionError(err.message || 'Extraction failed unexpectedly. Please try again.')
     }
     setScanning(false)
   }
