@@ -26,6 +26,7 @@ export function Photos() {
   const { user } = useAuth()
   const location = useLocation()
   const fileRef = useRef<HTMLInputElement>(null)
+  const lastUploadedFile = useRef<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [viewPhoto, setViewPhoto] = useState<Photo | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Photo | null>(null)
@@ -84,9 +85,12 @@ export function Photos() {
     e.preventDefault()
     if (!selectedFile) return
     setUploading(true)
+    const isWhiteboard = photoSource === 'ryan-whiteboard'
+    // Keep reference to the File for CORS-free AI scanning
+    if (isWhiteboard) lastUploadedFile.current = selectedFile
     try {
       const { url, fileName } = await uploadPhoto(selectedFile)
-      await addItem('photos', {
+      const photoDoc = {
         url, fileName, caption,
         tags: [photoSource],
         source: photoSource,
@@ -95,15 +99,25 @@ export function Photos() {
         thumbnailUrl: null,
         jobId: photoJobId,
         uploadedBy: user?.uid || '',
-      })
+      }
+      const docRef = await addItem('photos', photoDoc)
       setUploadModalOpen(false)
       setCaption(''); setPhotoSource('ryan-whiteboard'); setPhotoJobId(null)
       setSelectedFile(null); setPreviewUrl(null)
+      setUploading(false)
+
+      // Auto-trigger AI scan for whiteboard photos
+      if (isWhiteboard) {
+        const newPhoto = { id: docRef.id, ...photoDoc, createdAt: { toDate: () => new Date() } } as any as Photo
+        setViewPhoto(newPhoto)
+        // Auto-scan after a brief delay for modal to render
+        setTimeout(() => handleScanWhiteboardWithFile(newPhoto), 300)
+      }
     } catch (err) {
       console.error('Upload failed:', err)
       alert('Upload failed. Please try again.')
+      setUploading(false)
     }
-    setUploading(false)
   }
 
   const markProcessed = async (photo: Photo) => {
@@ -117,8 +131,7 @@ export function Photos() {
   }
 
   // ─── AI Extraction ──────────────────────────────────────
-  const handleScanWhiteboard = async () => {
-    if (!viewPhoto) return
+  const runScan = async (imageSource: string | File, captionText?: string) => {
     setScanning(true)
     setScanProgress(0)
     setScanStep('Starting...')
@@ -131,7 +144,7 @@ export function Photos() {
         setTimeout(() => reject(new Error('Scan timed out after 60 seconds. Try a smaller or clearer photo.')), 60000)
       )
       const result = await Promise.race([
-        extractWhiteboardData(viewPhoto.url, viewPhoto.caption, (step, pct) => {
+        extractWhiteboardData(imageSource, captionText, (step, pct) => {
           setScanStep(step)
           setScanProgress(pct)
         }),
@@ -160,6 +173,21 @@ export function Photos() {
     setScanning(false)
     setScanProgress(0)
     setScanStep('')
+  }
+
+  const handleScanWhiteboard = async () => {
+    if (!viewPhoto) return
+    // Use the stored File if available (avoids CORS), otherwise fall back to URL
+    const source = lastUploadedFile.current || viewPhoto.url
+    await runScan(source, viewPhoto.caption)
+    lastUploadedFile.current = null
+  }
+
+  const handleScanWhiteboardWithFile = async (photo: Photo) => {
+    // Called right after upload — use the stored File directly
+    const source = lastUploadedFile.current || photo.url
+    await runScan(source, photo.caption)
+    lastUploadedFile.current = null
   }
 
   const updateExtractedItem = (index: number, field: keyof ExtractedItem, value: any) => {
