@@ -150,8 +150,7 @@ export function Board() {
     setScanning(true); setUploading(true); setExtractionError('')
 
     try {
-      // Upload to Firebase Storage AND scan with AI in parallel
-      // Pass the File directly to avoid CORS issues with Firebase Storage URLs
+      // Upload to Firebase Storage (non-blocking — scan runs even if upload fails)
       const uploadPromise = uploadPhoto(file).then(async ({ url }) => {
         await addItem('photos', {
           url, fileName: file.name, caption: 'Whiteboard scan',
@@ -160,59 +159,69 @@ export function Board() {
           jobId: null, uploadedBy: user?.uid || '',
         })
         setUploading(false)
+      }).catch(err => {
+        console.warn('Photo upload failed (scan still running):', err.message)
+        setUploading(false)
       })
 
       // Scan using the File directly — no CORS fetch needed
       const scanPromise = extractWhiteboardData(file)
 
-      const [, result] = await Promise.all([uploadPromise, scanPromise])
+      // Run both in parallel — upload failure doesn't block scan
+      const [, scanResult] = await Promise.allSettled([uploadPromise, scanPromise])
 
-      if (result.error) {
-        setExtractionError(result.error)
-      } else if (result.items.length === 0) {
-        setExtractionError('No readable items found on this whiteboard.')
+      // Extract scan result
+      if (scanResult.status === 'rejected') {
+        setExtractionError(scanResult.reason?.message || 'AI scan failed')
       } else {
-        // Auto-accept high-confidence items, show review for the rest
-        const highConf = result.items.filter(i => i.confidence === 'high')
-        const needsReview = result.items.filter(i => i.confidence !== 'high')
-
-        // Auto-create high-confidence items immediately
-        let created = 0
-        for (const item of highConf) {
-          await addItem('boardItems', {
-            title: item.customerName || item.description.slice(0, 60) || 'Whiteboard item',
-            description: [item.address && `📍 ${item.address}`, item.phone && `📞 ${item.phone}`, item.jobType !== 'other' && `🔧 ${item.jobType}`, item.estimateAmount && `💰 $${item.estimateAmount.toLocaleString()}`, item.description].filter(Boolean).join('\n'),
-            category: item.jobType === 'repair' ? 'repair' : 'estimate',
-            priority: item.priority, status: 'inbox' as BoardStatus,
-            source: 'ryan-whiteboard' as UpdateSource,
-            assignedTo: null, dueDate: null, createdBy: user?.uid || '', archivedAt: null,
-          })
-          if (item.customerName && (item.address || item.description)) {
-            await addItem('jobs', {
-              customerName: item.customerName, customerPhone: item.phone || '',
-              customerEmail: '', address: item.address || '',
-              description: item.description || '', status: 'lead',
-              estimateAmount: item.estimateAmount, invoiceAmount: null, paidAmount: null,
-              notes: `Auto-extracted from whiteboard on ${format(new Date(), 'MMM d, yyyy')}`,
-              scheduledDate: null, completedDate: null,
-              createdBy: user?.uid || '', archivedAt: null,
-            })
-          }
-          created++
-        }
-        setAutoCreated(created)
-
-        if (needsReview.length > 0) {
-          setExtractedItems(needsReview)
-          setExtractionSummary(result.rawSummary)
+        const result = scanResult.value
+        if (result.error) {
+          setExtractionError(result.error)
+        } else if (result.items.length === 0) {
+          setExtractionError('No readable items found on this whiteboard.')
         } else {
-          // All items were high-confidence — auto-close after brief success
-          setExtractionSummary(`✅ ${created} item${created !== 1 ? 's' : ''} auto-added to your Inbox`)
-          setTimeout(() => closeScanModal(), 2500)
+          // Auto-accept high-confidence items, show review for the rest
+          const highConf = result.items.filter(i => i.confidence === 'high')
+          const needsReview = result.items.filter(i => i.confidence !== 'high')
+
+          // Auto-create high-confidence items immediately
+          let created = 0
+          for (const item of highConf) {
+            await addItem('boardItems', {
+              title: item.customerName || item.description.slice(0, 60) || 'Whiteboard item',
+              description: [item.address && `📍 ${item.address}`, item.phone && `📞 ${item.phone}`, item.jobType !== 'other' && `🔧 ${item.jobType}`, item.estimateAmount && `💰 $${item.estimateAmount.toLocaleString()}`, item.description].filter(Boolean).join('\n'),
+              category: item.jobType === 'repair' ? 'repair' : 'estimate',
+              priority: item.priority, status: 'inbox' as BoardStatus,
+              source: 'ryan-whiteboard' as UpdateSource,
+              assignedTo: null, dueDate: null, createdBy: user?.uid || '', archivedAt: null,
+            })
+            if (item.customerName && (item.address || item.description)) {
+              await addItem('jobs', {
+                customerName: item.customerName, customerPhone: item.phone || '',
+                customerEmail: '', address: item.address || '',
+                description: item.description || '', status: 'lead',
+                estimateAmount: item.estimateAmount, invoiceAmount: null, paidAmount: null,
+                notes: `Auto-extracted from whiteboard on ${format(new Date(), 'MMM d, yyyy')}`,
+                scheduledDate: null, completedDate: null,
+                createdBy: user?.uid || '', archivedAt: null,
+              })
+            }
+            created++
+          }
+          setAutoCreated(created)
+
+          if (needsReview.length > 0) {
+            setExtractedItems(needsReview)
+            setExtractionSummary(result.rawSummary)
+          } else {
+            // All items were high-confidence — auto-close after brief success
+            setExtractionSummary(`✅ ${created} item${created !== 1 ? 's' : ''} auto-added to your Inbox`)
+            setTimeout(() => closeScanModal(), 2500)
+          }
         }
       }
     } catch (err: any) {
-      setExtractionError(err.message || 'Upload or scan failed')
+      setExtractionError(err.message || 'Scan failed')
     }
     setScanning(false); setUploading(false)
   }

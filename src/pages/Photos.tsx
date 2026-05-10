@@ -88,6 +88,7 @@ export function Photos() {
     const isWhiteboard = photoSource === 'ryan-whiteboard'
     // Keep reference to the File for CORS-free AI scanning
     if (isWhiteboard) lastUploadedFile.current = selectedFile
+
     try {
       const { url, fileName } = await uploadPhoto(selectedFile)
       const photoDoc = {
@@ -110,13 +111,32 @@ export function Photos() {
       if (isWhiteboard) {
         const newPhoto = { id: docRef.id, ...photoDoc, createdAt: { toDate: () => new Date() } } as any as Photo
         setViewPhoto(newPhoto)
-        // Auto-scan after a brief delay for modal to render
         setTimeout(() => handleScanWhiteboardWithFile(newPhoto), 300)
       }
-    } catch (err) {
-      console.error('Upload failed:', err)
-      alert('Upload failed. Please try again.')
+    } catch (err: any) {
+      console.warn('Upload to storage failed:', err.message)
       setUploading(false)
+
+      // For whiteboard photos: skip storage, go straight to AI scan
+      if (isWhiteboard) {
+        setUploadModalOpen(false)
+        setCaption(''); setPhotoSource('ryan-whiteboard'); setPhotoJobId(null)
+        setSelectedFile(null); setPreviewUrl(null)
+
+        // Create a placeholder photo doc (no storage URL)
+        const placeholderPhoto = {
+          id: 'temp-' + Date.now(),
+          url: '', fileName: selectedFile.name, caption,
+          tags: [photoSource], source: photoSource,
+          processed: false, boardItemId: null, thumbnailUrl: null,
+          jobId: photoJobId, uploadedBy: user?.uid || '',
+          createdAt: { toDate: () => new Date() },
+        } as any as Photo
+        setViewPhoto(placeholderPhoto)
+        setTimeout(() => handleScanWhiteboardWithFile(placeholderPhoto), 300)
+      } else {
+        alert('Upload failed: ' + (err.message || 'Please try again.'))
+      }
     }
   }
 
