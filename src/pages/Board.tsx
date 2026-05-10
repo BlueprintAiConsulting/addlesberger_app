@@ -150,17 +150,23 @@ export function Board() {
     setScanning(true); setUploading(true); setExtractionError('')
 
     try {
-      const { url } = await uploadPhoto(file)
-      await addItem('photos', {
-        url, fileName: file.name, caption: 'Whiteboard scan',
-        tags: ['ryan-whiteboard'], source: 'ryan-whiteboard',
-        processed: false, boardItemId: null, thumbnailUrl: null,
-        jobId: null, uploadedBy: user?.uid || '',
+      // Upload to Firebase Storage AND scan with AI in parallel
+      // Pass the File directly to avoid CORS issues with Firebase Storage URLs
+      const uploadPromise = uploadPhoto(file).then(async ({ url }) => {
+        await addItem('photos', {
+          url, fileName: file.name, caption: 'Whiteboard scan',
+          tags: ['ryan-whiteboard'], source: 'ryan-whiteboard',
+          processed: false, boardItemId: null, thumbnailUrl: null,
+          jobId: null, uploadedBy: user?.uid || '',
+        })
+        setUploading(false)
       })
-      setUploading(false)
 
-      // Now scan with AI
-      const result = await extractWhiteboardData(url)
+      // Scan using the File directly — no CORS fetch needed
+      const scanPromise = extractWhiteboardData(file)
+
+      const [, result] = await Promise.all([uploadPromise, scanPromise])
+
       if (result.error) {
         setExtractionError(result.error)
       } else if (result.items.length === 0) {

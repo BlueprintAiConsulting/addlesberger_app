@@ -200,6 +200,14 @@ function isDocx(file: File): boolean {
     file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 }
 
+// ─── Gemini Model Selection ─────────────────────────────
+// Try multiple models in case one is unavailable for the API key
+const GEMINI_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+]
+
 export async function extractTemplateFromDocument(
   file: File,
   type: 'estimate' | 'invoice'
@@ -228,30 +236,68 @@ export async function extractTemplateFromDocument(
       ]
     }
 
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts }],
-        }),
-      }
-    )
+    // Try each model until one succeeds
+    let lastError = ''
+    for (const model of GEMINI_MODELS) {
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts }],
+              generationConfig: { temperature: 0.1, maxOutputTokens: 4096 },
+            }),
+          }
+        )
 
-    if (!res.ok) {
-      const err = await res.text()
-      throw new Error(`Gemini API error (${res.status}): ${err}`)
+        if (res.status === 404 || res.status === 400) {
+          const errBody = await res.text()
+          if (errBody.includes('not found') || errBody.includes('not supported') || errBody.includes('does not exist')) {
+            lastError = `Model ${model} not available`
+            continue
+          }
+          throw new Error(`Gemini API error (${res.status}): ${errBody.slice(0, 200)}`)
+        }
+
+        if (!res.ok) {
+          const err = await res.text()
+          throw new Error(`Gemini API error (${res.status}): ${err.slice(0, 200)}`)
+        }
+
+        const data = await res.json()
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+
+        if (!text.trim()) {
+          lastError = `Model ${model} returned empty response`
+          continue
+        }
+
+        // Parse JSON — strip markdown fences if present, with robust fallback
+        const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+        let parsed: any
+        try {
+          parsed = JSON.parse(cleaned)
+        } catch {
+          // Try extracting JSON object from response
+          const match = text.match(/\{[\s\S]*\}/)
+          if (match) {
+            parsed = JSON.parse(match[0])
+          } else {
+            lastError = `Model ${model}: Could not parse AI response`
+            continue
+          }
+        }
+
+        return { data: parsed, rawText: text }
+      } catch (modelErr: any) {
+        lastError = modelErr.message
+        continue
+      }
     }
 
-    const data = await res.json()
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
-
-    // Parse JSON — strip markdown fences if present
-    const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-    const parsed = JSON.parse(cleaned)
-
-    return { data: parsed, rawText: text }
+    throw new Error(lastError || 'All AI models failed. Please try again.')
   } catch (err: any) {
     console.error('Document extraction failed:', err)
     return { data: null, rawText: '', error: err.message || 'Extraction failed' }

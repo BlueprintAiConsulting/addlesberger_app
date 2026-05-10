@@ -54,7 +54,13 @@ function getApiKey(): string {
   return key
 }
 
-// ─── Image → Base64 (handles CORS gracefully) ──────────
+// ─── File/Blob → Base64 (no CORS needed) ───────────────
+async function fileOrBlobToBase64(source: File | Blob): Promise<{ base64: string; mimeType: string }> {
+  const mimeType = source.type || 'image/jpeg'
+  return blobToBase64(source, mimeType)
+}
+
+// ─── Image URL → Base64 (handles CORS gracefully) ───────
 async function imageUrlToBase64(url: string): Promise<{ base64: string; mimeType: string }> {
   // Try 1: Direct fetch (works when same-origin or CORS-enabled)
   try {
@@ -249,7 +255,7 @@ const GEMINI_MODELS = [
 export type ProgressCallback = (step: string, percent: number) => void
 
 export async function extractWhiteboardData(
-  imageUrl: string,
+  imageSource: string | File | Blob,
   userNotes?: string,
   onProgress?: ProgressCallback,
 ): Promise<ExtractionResult> {
@@ -261,7 +267,13 @@ export async function extractWhiteboardData(
     onProgress?.('Loading image...', 10)
     let base64Data: { base64: string; mimeType: string }
     try {
-      base64Data = await imageUrlToBase64(imageUrl)
+      if (imageSource instanceof File || imageSource instanceof Blob) {
+        // Direct File/Blob — no CORS issues, fastest path
+        base64Data = await fileOrBlobToBase64(imageSource)
+      } else {
+        // URL string — fetch with CORS fallbacks
+        base64Data = await imageUrlToBase64(imageSource)
+      }
     } catch (imgErr: any) {
       return { items: [], rawSummary: '', error: `Failed to load image: ${imgErr.message}` }
     }
