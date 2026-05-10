@@ -75,6 +75,7 @@ export interface Estimate {
   subtotal: number
   tax: number
   total: number
+  priceOverride: number | null  // Manual price override — when set, this is used as the total instead of line-item sum
   status: EstimateStatus
   notes: string
   templateId: string | null

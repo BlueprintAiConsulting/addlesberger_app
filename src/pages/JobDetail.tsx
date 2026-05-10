@@ -203,6 +203,13 @@ function LinkedEstimates({ jobId }: { jobId: string }) {
   const { data: estimates } = useCollection<Estimate>('estimates', [orderBy('createdAt', 'desc')])
   const linked = estimates.filter(e => e.jobId === jobId)
   if (linked.length === 0) return null
+
+  // Helper: get the effective price (respects priceOverride)
+  const getPrice = (est: Estimate) => {
+    if (est.priceOverride != null && est.priceOverride > 0) return est.priceOverride
+    return est.total
+  }
+
   return (
     <div className="card">
       <h3 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 12px', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.04em' }}>
@@ -216,7 +223,7 @@ function LinkedEstimates({ jobId }: { jobId: string }) {
               <span style={{ fontSize: 12, color: 'var(--muted)', marginLeft: 8 }}>{est.lineItems.length} items</span>
             </div>
             <div className="row gap-sm">
-              <span style={{ fontWeight: 700, color: 'var(--brand)' }}>${est.total.toLocaleString()}</span>
+              <span style={{ fontWeight: 700, color: 'var(--brand)' }}>${getPrice(est).toLocaleString()}</span>
               <span className={`badge ${T.ESTIMATE_STATUS_COLORS[est.status]}`} style={{ fontSize: 10, padding: '2px 6px' }}>{T.ESTIMATE_STATUS_LABELS[est.status]}</span>
             </div>
           </div>

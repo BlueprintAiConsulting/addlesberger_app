@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, FormEvent } from 'react'
-import { orderBy, Timestamp } from 'firebase/firestore'
+import { orderBy, where, Timestamp } from 'firebase/firestore'
 import { format, isPast, isToday } from 'date-fns'
 import { Plus, Archive, Camera, Sparkles, Loader2, ChevronDown, ChevronUp, Trash2, X } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
