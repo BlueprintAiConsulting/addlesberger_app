@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, FormEvent } from 'react'
 import { orderBy } from 'firebase/firestore'
 import { format } from 'date-fns'
 import { useLocation } from 'react-router-dom'
-import { Camera, CheckCircle, Image as ImageIcon, Trash2, Sparkles, Loader2, ChevronDown, ChevronUp, Plus, AlertTriangle } from 'lucide-react'
+import { Camera, CheckCircle, Image as ImageIcon, Trash2, Sparkles, Loader2, ChevronDown, ChevronUp, Plus, AlertTriangle, Crop } from 'lucide-react'
 import { useCollection } from '@/hooks/useCollection'
 import { useAuth } from '@/hooks/useAuth'
 import { addItem, updateItem, deleteItem } from '@/lib/firestore'
@@ -11,6 +11,7 @@ import { extractWhiteboardData, findDuplicates, type ExtractedItem, type Extract
 import { Modal } from '@/components/Modal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { EmptyState } from '@/components/EmptyState'
+import { ImageCropper } from '@/components/ImageCropper'
 import type { Photo, Job, BoardItem, PhotoSource } from '@/types'
 import * as T from '@/types'
 
@@ -44,6 +45,7 @@ export function Photos() {
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [acceptingAll, setAcceptingAll] = useState(false)
   const [duplicateWarnings, setDuplicateWarnings] = useState<Map<number, string>>(new Map())
+  const [cropMode, setCropMode] = useState(false)
 
   useEffect(() => {
     if ((location.state as any)?.openCreate) {
@@ -289,6 +291,12 @@ export function Photos() {
     setAcceptingAll(false)
   }
 
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    setCropMode(false)
+    const file = new File([croppedBlob], 'cropped-whiteboard.jpg', { type: 'image/jpeg' })
+    await runScan(file, viewPhoto?.caption)
+  }
+
   const closeViewModal = () => {
     setViewPhoto(null)
     setShowReview(false)
@@ -296,6 +304,7 @@ export function Photos() {
     setExtractionSummary('')
     setExtractionError('')
     setEditingIndex(null)
+    setCropMode(false)
   }
 
   return (
@@ -398,7 +407,16 @@ export function Photos() {
       <Modal open={!!viewPhoto} onClose={closeViewModal} title={viewPhoto?.caption || 'Photo'}>
         {viewPhoto && (
           <div className="stack stack-md">
-            <img src={viewPhoto.url} alt={viewPhoto.caption} style={{ width: '100%', borderRadius: 'var(--radius-sm)' }} />
+            {/* Image or Crop mode */}
+            {cropMode ? (
+              <ImageCropper
+                imageUrl={viewPhoto.url}
+                onCrop={handleCropComplete}
+                onCancel={() => setCropMode(false)}
+              />
+            ) : (
+              <img src={viewPhoto.url} alt={viewPhoto.caption} style={{ width: '100%', borderRadius: 'var(--radius-sm)' }} />
+            )}
             {viewPhoto.caption && <p style={{ margin: 0, fontSize: 15 }}>{viewPhoto.caption}</p>}
 
             <div className="row gap-sm" style={{ flexWrap: 'wrap' }}>
@@ -419,15 +437,24 @@ export function Photos() {
 
             {/* Action buttons */}
             <div className="row gap-sm" style={{ flexWrap: 'wrap' }}>
-              {/* AI Scan button — only for whiteboard photos */}
-              {viewPhoto.source === 'ryan-whiteboard' && !viewPhoto.processed && !showReview && !scanning && (
-                <button
-                  className="btn btn-primary btn-sm"
-                  onClick={handleScanWhiteboard}
-                  style={{ background: 'linear-gradient(135deg, #7C3AED, #9333EA)', border: 'none' }}
-                >
-                  <Sparkles size={16} /> Scan Whiteboard
-                </button>
+              {/* AI Scan buttons — only for whiteboard photos */}
+              {viewPhoto.source === 'ryan-whiteboard' && !viewPhoto.processed && !showReview && !scanning && !cropMode && (
+                <>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={handleScanWhiteboard}
+                    style={{ background: 'linear-gradient(135deg, #7C3AED, #9333EA)', border: 'none' }}
+                  >
+                    <Sparkles size={16} /> Scan Full
+                  </button>
+                  <button
+                    className="btn btn-outline btn-sm"
+                    onClick={() => setCropMode(true)}
+                    style={{ borderColor: '#7C3AED', color: '#7C3AED' }}
+                  >
+                    <Crop size={16} /> Crop & Scan
+                  </button>
+                </>
               )}
 
               {!viewPhoto.processed ? (
@@ -645,6 +672,7 @@ export function Photos() {
                 </button>
               </div>
             )}
+            {/* Close the cropMode ternary's non-crop branch */}
           </div>
         )}
       </Modal>
