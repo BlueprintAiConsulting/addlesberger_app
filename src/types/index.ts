@@ -145,11 +145,11 @@ export const INVOICE_PAYMENT_STATUS_LABELS: Record<InvoicePaymentStatus, string>
   'paidInFull': 'Paid in Full',
 }
 
-export const INVOICE_PAYMENT_STATUS_COLORS: Record<InvoicePaymentStatus, string> = {
-  'unpaid': 'bg-red-100 text-red-700',
-  'depositPaid': 'bg-amber-100 text-amber-700',
-  'balanceDue': 'bg-blue-100 text-blue-700',
-  'paidInFull': 'bg-emerald-100 text-emerald-700',
+export const INVOICE_PAYMENT_STATUS_COLORS: Record<InvoicePaymentStatus, { bg: string; color: string }> = {
+  'unpaid': { bg: '#FEE2E2', color: '#B91C1C' },
+  'depositPaid': { bg: '#FEF3C7', color: '#B45309' },
+  'balanceDue': { bg: '#DBEAFE', color: '#1D4ED8' },
+  'paidInFull': { bg: '#D1FAE5', color: '#047857' },
 }
 
 export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
@@ -159,11 +159,11 @@ export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
   'archived': 'Archived',
 }
 
-export const INVOICE_STATUS_COLORS: Record<InvoiceStatus, string> = {
-  'draft': 'bg-slate-200 text-slate-700',
-  'sent': 'bg-blue-100 text-blue-700',
-  'paid': 'bg-emerald-100 text-emerald-700',
-  'archived': 'bg-slate-100 text-slate-500',
+export const INVOICE_STATUS_COLORS: Record<InvoiceStatus, { bg: string; color: string }> = {
+  'draft': { bg: '#E2E8F0', color: '#334155' },
+  'sent': { bg: '#DBEAFE', color: '#1D4ED8' },
+  'paid': { bg: '#D1FAE5', color: '#047857' },
+  'archived': { bg: '#F1F5F9', color: '#64748B' },
 }
 
 // ─── Photos ───────────────────────────────────────────────
@@ -220,15 +220,15 @@ export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
   'paid': 'Paid',
 }
 
-export const JOB_STATUS_COLORS: Record<JobStatus, string> = {
-  'lead': 'bg-slate-200 text-slate-700',
-  'estimate-sent': 'bg-blue-100 text-blue-700',
-  'approved': 'bg-emerald-100 text-emerald-700',
-  'scheduled': 'bg-indigo-100 text-indigo-700',
-  'in-progress': 'bg-amber-100 text-amber-800',
-  'complete': 'bg-green-100 text-green-700',
-  'invoiced': 'bg-purple-100 text-purple-700',
-  'paid': 'bg-emerald-200 text-emerald-800',
+export const JOB_STATUS_COLORS: Record<JobStatus, { bg: string; color: string }> = {
+  'lead': { bg: '#E2E8F0', color: '#334155' },
+  'estimate-sent': { bg: '#DBEAFE', color: '#1D4ED8' },
+  'approved': { bg: '#D1FAE5', color: '#047857' },
+  'scheduled': { bg: '#E0E7FF', color: '#4338CA' },
+  'in-progress': { bg: '#FEF3C7', color: '#92400E' },
+  'complete': { bg: '#DCFCE7', color: '#15803D' },
+  'invoiced': { bg: '#F3E8FF', color: '#7C3AED' },
+  'paid': { bg: '#A7F3D0', color: '#065F46' },
 }
 
 export const BOARD_CATEGORY_LABELS: Record<BoardCategory, string> = {
@@ -239,12 +239,12 @@ export const BOARD_CATEGORY_LABELS: Record<BoardCategory, string> = {
   'other': 'Other',
 }
 
-export const BOARD_CATEGORY_COLORS: Record<BoardCategory, string> = {
-  'estimate': 'bg-blue-100 text-blue-700',
-  'repair': 'bg-red-100 text-red-700',
-  'job': 'bg-indigo-100 text-indigo-700',
-  'note': 'bg-amber-100 text-amber-700',
-  'other': 'bg-slate-100 text-slate-600',
+export const BOARD_CATEGORY_COLORS: Record<BoardCategory, { bg: string; color: string }> = {
+  'estimate': { bg: '#DBEAFE', color: '#1D4ED8' },
+  'repair': { bg: '#FEE2E2', color: '#B91C1C' },
+  'job': { bg: '#E0E7FF', color: '#4338CA' },
+  'note': { bg: '#FEF3C7', color: '#B45309' },
+  'other': { bg: '#F1F5F9', color: '#475569' },
 }
 
 export const BOARD_STATUS_LABELS: Record<BoardStatus, string> = {
@@ -290,11 +290,18 @@ export const ESTIMATE_STATUS_LABELS: Record<EstimateStatus, string> = {
   'declined': 'Declined',
 }
 
-export const ESTIMATE_STATUS_COLORS: Record<EstimateStatus, string> = {
-  'draft': 'bg-slate-200 text-slate-700',
-  'sent': 'bg-blue-100 text-blue-700',
-  'approved': 'bg-emerald-100 text-emerald-700',
-  'declined': 'bg-red-100 text-red-700',
+export const ESTIMATE_STATUS_COLORS: Record<EstimateStatus, { bg: string; color: string }> = {
+  'draft': { bg: '#E2E8F0', color: '#334155' },
+  'sent': { bg: '#DBEAFE', color: '#1D4ED8' },
+  'approved': { bg: '#D1FAE5', color: '#047857' },
+  'declined': { bg: '#FEE2E2', color: '#B91C1C' },
+}
+
+// ─── Shared UI Styles ─────────────────────────────────────
+export const CONFIDENCE_STYLES: Record<string, { bg: string; color: string; label: string }> = {
+  high: { bg: 'var(--success-bg)', color: 'var(--success)', label: 'High' },
+  medium: { bg: 'var(--warning-bg)', color: 'var(--warning)', label: 'Medium' },
+  low: { bg: 'var(--danger-bg)', color: 'var(--danger)', label: 'Low' },
 }
 
 // Safe migration helpers for old data

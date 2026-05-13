@@ -22,16 +22,14 @@ const COLUMNS: { status: BoardStatus; label: string }[] = [
   { status: 'completed', label: 'Completed' },
 ]
 
-const CONFIDENCE_STYLES: Record<string, { bg: string; color: string; label: string }> = {
-  high: { bg: 'var(--success-bg)', color: 'var(--success)', label: 'High' },
-  medium: { bg: 'var(--warning-bg)', color: 'var(--warning)', label: 'Medium' },
-  low: { bg: 'var(--danger-bg)', color: 'var(--danger)', label: 'Low' },
-}
+
+
 
 export function Board() {
   const location = useLocation()
   const { user } = useAuth()
   const photoRef = useRef<HTMLInputElement>(null)
+  const photoGalleryRef = useRef<HTMLInputElement>(null)
   const [showArchived, setShowArchived] = useState(false)
   const [filterCategory, setFilterCategory] = useState<BoardCategory | 'all'>('all')
   const [modalOpen, setModalOpen] = useState(false)
@@ -292,11 +290,15 @@ export function Board() {
             style={{ background: 'linear-gradient(135deg, #7C3AED, #9333EA)', color: '#fff', border: 'none' }}>
             <Camera size={16} /> Scan
           </button>
+          <button className="btn btn-sm btn-outline" onClick={() => photoGalleryRef.current?.click()}>
+            📁 Gallery
+          </button>
           <button className="btn btn-accent btn-sm" onClick={openCreate}>
             <Plus size={18} /> Capture
           </button>
         </div>
         <input ref={photoRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handlePhotoSelect} />
+        <input ref={photoGalleryRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoSelect} />
       </div>
 
       {/* Category filter */}
@@ -331,7 +333,7 @@ export function Board() {
                 ) : items.map((item) => (
                   <div key={item.id} className="card card-pressable" onClick={() => openEdit(item)}>
                     <div className="row gap-sm" style={{ marginBottom: 6, flexWrap: 'wrap' }}>
-                      <span className={`badge ${T.BOARD_CATEGORY_COLORS[item.category as BoardCategory] || 'bg-slate-100 text-slate-600'}`}>{T.BOARD_CATEGORY_LABELS[item.category as BoardCategory] || item.category}</span>
+                      <span className="badge" style={{ background: (T.BOARD_CATEGORY_COLORS[item.category as BoardCategory] || { bg: '#F1F5F9', color: '#475569' }).bg, color: (T.BOARD_CATEGORY_COLORS[item.category as BoardCategory] || { bg: '#F1F5F9', color: '#475569' }).color }}>{T.BOARD_CATEGORY_LABELS[item.category as BoardCategory] || item.category}</span>
                       {item.priority === 'urgent' && <span className="badge badge-urgent">Urgent</span>}
                     </div>
                     <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: 15 }}>{item.title}</p>
@@ -462,7 +464,7 @@ export function Board() {
               </div>
 
               {extractedItems.map((item, idx) => {
-                const conf = CONFIDENCE_STYLES[item.confidence] || CONFIDENCE_STYLES.medium
+                const conf = T.CONFIDENCE_STYLES[item.confidence] || T.CONFIDENCE_STYLES.medium
                 const isEditing = editingIndex === idx
                 return (
                   <div key={idx} className="card" style={{ borderLeft: '3px solid var(--purple)' }}>

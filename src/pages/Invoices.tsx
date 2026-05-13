@@ -283,7 +283,7 @@ export function Invoices() {
           </div>
 
           <div style={{ margin: '16px 0' }}>
-            <span className={`badge ${T.INVOICE_PAYMENT_STATUS_COLORS[inv.paymentStatus]}`} style={{ fontSize: 13, padding: '6px 16px' }}>
+            <span className="badge" style={{ fontSize: 13, padding: '6px 16px', background: T.INVOICE_PAYMENT_STATUS_COLORS[inv.paymentStatus]?.bg, color: T.INVOICE_PAYMENT_STATUS_COLORS[inv.paymentStatus]?.color }}>
               {T.INVOICE_PAYMENT_STATUS_LABELS[inv.paymentStatus]}
             </span>
           </div>
@@ -325,8 +325,8 @@ export function Invoices() {
                     <p className="truncate" style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>{inv.clientAddress}</p>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                    <span className={`badge ${T.INVOICE_STATUS_COLORS[inv.status]}`}>{T.INVOICE_STATUS_LABELS[inv.status]}</span>
-                    <span className={`badge ${T.INVOICE_PAYMENT_STATUS_COLORS[inv.paymentStatus]}`}>{T.INVOICE_PAYMENT_STATUS_LABELS[inv.paymentStatus]}</span>
+                    <span className="badge" style={{ background: T.INVOICE_STATUS_COLORS[inv.status]?.bg, color: T.INVOICE_STATUS_COLORS[inv.status]?.color }}>{T.INVOICE_STATUS_LABELS[inv.status]}</span>
+                    <span className="badge" style={{ background: T.INVOICE_PAYMENT_STATUS_COLORS[inv.paymentStatus]?.bg, color: T.INVOICE_PAYMENT_STATUS_COLORS[inv.paymentStatus]?.color }}>{T.INVOICE_PAYMENT_STATUS_LABELS[inv.paymentStatus]}</span>
                   </div>
                 </div>
                 <div className="row row-between" style={{ marginBottom: 12 }}>

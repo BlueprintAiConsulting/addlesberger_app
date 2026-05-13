@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 // Username → email shortcuts so Charlene doesn't need to type her email
 const USERNAME_MAP: Record<string, string> = {
   charleen: 'rladdlesbergerroofing@gmail.com',
+  charlene: 'rladdlesbergerroofing@gmail.com',
   drew: 'drewhufnagle@gmail.com',
 }
 

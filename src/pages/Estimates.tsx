@@ -176,7 +176,7 @@ export function Estimates() {
                     <p style={{ margin: '0 0 2px', fontWeight: 600, fontSize: 16 }}>{est.customerName}</p>
                     <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>{est.address}</p>
                   </div>
-                  <span className={`badge ${T.ESTIMATE_STATUS_COLORS[est.status]}`}>{T.ESTIMATE_STATUS_LABELS[est.status]}</span>
+                  <span className="badge" style={{ background: T.ESTIMATE_STATUS_COLORS[est.status]?.bg, color: T.ESTIMATE_STATUS_COLORS[est.status]?.color }}>{T.ESTIMATE_STATUS_LABELS[est.status]}</span>
                 </div>
                 <div className="row row-between" style={{ marginBottom: 8 }}>
                   <div>

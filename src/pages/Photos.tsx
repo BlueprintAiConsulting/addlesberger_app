@@ -17,16 +17,13 @@ import * as T from '@/types'
 
 const PHOTO_SOURCES: PhotoSource[] = ['ryan-whiteboard', 'jobsite', 'before', 'after', 'damage', 'material', 'other']
 
-const CONFIDENCE_STYLES: Record<string, { bg: string; color: string; label: string }> = {
-  high: { bg: 'var(--success-bg)', color: 'var(--success)', label: 'High' },
-  medium: { bg: 'var(--warning-bg)', color: 'var(--warning)', label: 'Medium' },
-  low: { bg: 'var(--danger-bg)', color: 'var(--danger)', label: 'Low' },
-}
+
 
 export function Photos() {
   const { user } = useAuth()
   const location = useLocation()
   const fileRef = useRef<HTMLInputElement>(null)
+  const galleryRef = useRef<HTMLInputElement>(null)
   const lastUploadedFile = useRef<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [viewPhoto, setViewPhoto] = useState<Photo | null>(null)
@@ -311,10 +308,16 @@ export function Photos() {
     <div className="stack stack-lg">
       <div className="page-header">
         <h1 className="page-title">Photos</h1>
-        <button className="btn btn-accent btn-sm" onClick={() => fileRef.current?.click()}>
-          <Camera size={18} /> Upload
-        </button>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button className="btn btn-accent btn-sm" onClick={() => fileRef.current?.click()}>
+            <Camera size={18} /> Camera
+          </button>
+          <button className="btn btn-outline btn-sm" onClick={() => galleryRef.current?.click()}>
+            <ImageIcon size={18} /> Gallery
+          </button>
+        </div>
         <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFileSelect} />
+        <input ref={galleryRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileSelect} />
       </div>
 
       {/* Filters */}
@@ -550,7 +553,7 @@ export function Photos() {
 
                 {/* Extracted items */}
                 {extractedItems.map((item, idx) => {
-                  const conf = CONFIDENCE_STYLES[item.confidence] || CONFIDENCE_STYLES.medium
+                  const conf = T.CONFIDENCE_STYLES[item.confidence] || T.CONFIDENCE_STYLES.medium
                   const isEditing = editingIndex === idx
                   return (
                     <div key={idx} className="card" style={{ borderLeft: `3px solid var(--purple)` }}>

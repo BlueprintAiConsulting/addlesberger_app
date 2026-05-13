@@ -102,7 +102,7 @@ export function JobDetail() {
       <div className="card">
         <div className="row row-between gap-sm" style={{ marginBottom: 12 }}>
           <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>{job.customerName}</h1>
-          <span className={`badge ${T.JOB_STATUS_COLORS[job.status]}`}>{T.JOB_STATUS_LABELS[job.status]}</span>
+          <span className="badge" style={{ background: T.JOB_STATUS_COLORS[job.status]?.bg, color: T.JOB_STATUS_COLORS[job.status]?.color }}>{T.JOB_STATUS_LABELS[job.status]}</span>
         </div>
         <div className="stack stack-sm">
           {job.address && <div className="row gap-sm"><MapPin size={16} style={{ color: 'var(--muted)', flexShrink: 0 }} /><span style={{ fontSize: 14 }}>{job.address}</span></div>}
@@ -224,7 +224,7 @@ function LinkedEstimates({ jobId }: { jobId: string }) {
             </div>
             <div className="row gap-sm">
               <span style={{ fontWeight: 700, color: 'var(--brand)' }}>${getPrice(est).toLocaleString()}</span>
-              <span className={`badge ${T.ESTIMATE_STATUS_COLORS[est.status]}`} style={{ fontSize: 10, padding: '2px 6px' }}>{T.ESTIMATE_STATUS_LABELS[est.status]}</span>
+              <span className="badge" style={{ fontSize: 10, padding: '2px 6px', background: T.ESTIMATE_STATUS_COLORS[est.status]?.bg, color: T.ESTIMATE_STATUS_COLORS[est.status]?.color }}>{T.ESTIMATE_STATUS_LABELS[est.status]}</span>
             </div>
           </div>
         ))}

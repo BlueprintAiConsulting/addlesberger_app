@@ -108,7 +108,7 @@ export function Jobs() {
                     </p>
                   )}
                 </div>
-                <span className={`badge ${T.JOB_STATUS_COLORS[job.status]}`}>
+                <span className="badge" style={{ background: T.JOB_STATUS_COLORS[job.status]?.bg, color: T.JOB_STATUS_COLORS[job.status]?.color }}>
                   {T.JOB_STATUS_LABELS[job.status]}
                 </span>
               </div>

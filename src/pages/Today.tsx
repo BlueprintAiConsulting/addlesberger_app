@@ -3,19 +3,22 @@ import { where, orderBy } from 'firebase/firestore'
 import { format } from 'date-fns'
 import { Inbox, Camera, AlertTriangle, Clock, ChevronRight, Briefcase, DollarSign } from 'lucide-react'
 import { useCollection } from '@/hooks/useCollection'
+import { useAuth } from '@/hooks/useAuth'
 import type { BoardItem, Job, Photo } from '@/types'
 import * as T from '@/types'
 
-function getGreeting(): string {
+function getGreeting(name: string): string {
   const h = new Date().getHours()
-  if (h < 12) return 'Good morning, Charlene'
-  if (h < 17) return 'Good afternoon, Charlene'
-  return 'Good evening, Charlene'
+  if (h < 12) return `Good morning, ${name}`
+  if (h < 17) return `Good afternoon, ${name}`
+  return `Good evening, ${name}`
 }
 
 export function Today() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const today = new Date()
+  const displayName = user?.displayName || user?.email?.split('@')[0] || 'there'
 
   const { data: boardItems, loading: loadingBoard } = useCollection<BoardItem>('boardItems', [
     where('archivedAt', '==', null),
@@ -48,7 +51,7 @@ export function Today() {
           {format(today, 'EEEE, MMMM d')}
         </p>
         <h1 style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-.03em' }}>
-          {getGreeting()}
+          {getGreeting(displayName)}
         </h1>
       </div>
 
@@ -139,7 +142,7 @@ export function Today() {
                 <div className="row row-between gap-sm">
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="row gap-sm" style={{ marginBottom: 4 }}>
-                      <span className={`badge ${T.BOARD_CATEGORY_COLORS[T.migrateBoardCategory(item.category) as T.BoardCategory] || 'bg-slate-100 text-slate-600'}`}>
+                      <span className="badge" style={{ background: (T.BOARD_CATEGORY_COLORS[T.migrateBoardCategory(item.category) as T.BoardCategory] || { bg: '#F1F5F9', color: '#475569' }).bg, color: (T.BOARD_CATEGORY_COLORS[T.migrateBoardCategory(item.category) as T.BoardCategory] || { bg: '#F1F5F9', color: '#475569' }).color }}>
                         {T.BOARD_CATEGORY_LABELS[T.migrateBoardCategory(item.category) as T.BoardCategory] || item.category}
                       </span>
                       {item.priority === 'urgent' && (
@@ -204,7 +207,7 @@ export function Today() {
                       {job.address}
                     </p>
                   </div>
-                  <span className={`badge ${T.JOB_STATUS_COLORS[job.status]}`}>
+                  <span className="badge" style={{ background: T.JOB_STATUS_COLORS[job.status]?.bg, color: T.JOB_STATUS_COLORS[job.status]?.color }}>
                     {T.JOB_STATUS_LABELS[job.status]}
                   </span>
                 </div>

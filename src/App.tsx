@@ -3,6 +3,7 @@ import { Suspense, lazy } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { ALLOWED_EMAILS } from '@/firebase'
 import { Shell } from '@/components/Shell'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Login } from '@/pages/Login'
 
 
@@ -76,6 +77,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 function AppContent() {
   return (
     <Shell>
+      <ErrorBoundary>
       <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/" element={<Today />} />
@@ -89,6 +91,7 @@ function AppContent() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       </Suspense>
+      </ErrorBoundary>
     </Shell>
   )
 }
