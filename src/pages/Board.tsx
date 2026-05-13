@@ -29,7 +29,6 @@ export function Board() {
   const location = useLocation()
   const { user } = useAuth()
   const photoRef = useRef<HTMLInputElement>(null)
-  const photoGalleryRef = useRef<HTMLInputElement>(null)
   const [showArchived, setShowArchived] = useState(false)
   const [filterCategory, setFilterCategory] = useState<BoardCategory | 'all'>('all')
   const [modalOpen, setModalOpen] = useState(false)
@@ -290,15 +289,11 @@ export function Board() {
             style={{ background: 'linear-gradient(135deg, #7C3AED, #9333EA)', color: '#fff', border: 'none' }}>
             <Camera size={16} /> Scan
           </button>
-          <button className="btn btn-sm btn-outline" onClick={() => photoGalleryRef.current?.click()}>
-            📁 Gallery
-          </button>
           <button className="btn btn-accent btn-sm" onClick={openCreate}>
             <Plus size={18} /> Capture
           </button>
         </div>
-        <input ref={photoRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handlePhotoSelect} />
-        <input ref={photoGalleryRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoSelect} />
+        <input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoSelect} />
       </div>
 
       {/* Category filter */}

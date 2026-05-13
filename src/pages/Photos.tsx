@@ -23,7 +23,6 @@ export function Photos() {
   const { user } = useAuth()
   const location = useLocation()
   const fileRef = useRef<HTMLInputElement>(null)
-  const galleryRef = useRef<HTMLInputElement>(null)
   const lastUploadedFile = useRef<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [viewPhoto, setViewPhoto] = useState<Photo | null>(null)
@@ -308,16 +307,10 @@ export function Photos() {
     <div className="stack stack-lg">
       <div className="page-header">
         <h1 className="page-title">Photos</h1>
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button className="btn btn-accent btn-sm" onClick={() => fileRef.current?.click()}>
-            <Camera size={18} /> Camera
-          </button>
-          <button className="btn btn-outline btn-sm" onClick={() => galleryRef.current?.click()}>
-            <ImageIcon size={18} /> Gallery
-          </button>
-        </div>
-        <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFileSelect} />
-        <input ref={galleryRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileSelect} />
+        <button className="btn btn-accent btn-sm" onClick={() => fileRef.current?.click()}>
+          <Camera size={18} /> Upload
+        </button>
+        <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileSelect} />
       </div>
 
       {/* Filters */}
