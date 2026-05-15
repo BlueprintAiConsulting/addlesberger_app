@@ -310,6 +310,10 @@ export async function extractWhiteboardData(
 
         if (res.status === 404 || res.status === 400) {
           const errBody = await res.text()
+          // Check for invalid API key FIRST — don't let "API Key not found" match the model-not-found check
+          if (errBody.includes('API_KEY_INVALID') || errBody.includes('API key not valid') || errBody.includes('pass a valid API key')) {
+            throw new Error('Gemini API key is invalid or expired. Contact your administrator to update it.')
+          }
           if (errBody.includes('not found') || errBody.includes('not supported') || errBody.includes('does not exist')) {
             lastError = `Model ${model} not available`
             continue
