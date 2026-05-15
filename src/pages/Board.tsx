@@ -56,6 +56,10 @@ export function Board() {
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [acceptingAll, setAcceptingAll] = useState(false)
   const [autoCreated, setAutoCreated] = useState(0)
+  const [scanProgress, setScanProgress] = useState(0)
+  const [scanStep, setScanStep] = useState('')
+  const [scanElapsed, setScanElapsed] = useState(0)
+  const scanTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     if ((location.state as any)?.openCreate) {
@@ -145,6 +149,13 @@ export function Board() {
 
   const runScan = async (file: File) => {
     setScanning(true); setUploading(true); setExtractionError('')
+    setScanProgress(0); setScanStep('Starting scan...'); setScanElapsed(0)
+    // Start elapsed timer
+    if (scanTimerRef.current) clearInterval(scanTimerRef.current)
+    const startTime = Date.now()
+    scanTimerRef.current = setInterval(() => {
+      setScanElapsed(Math.floor((Date.now() - startTime) / 1000))
+    }, 1000)
 
     try {
       // Upload to Firebase Storage (non-blocking — scan runs even if upload fails)
@@ -162,7 +173,9 @@ export function Board() {
       })
 
       // Scan using the File directly — no CORS fetch needed
-      const scanPromise = extractWhiteboardData(file)
+      const scanPromise = extractWhiteboardData(file, undefined, (step, pct) => {
+        setScanStep(step); setScanProgress(pct)
+      })
 
       // Run both in parallel — upload failure doesn't block scan
       const [, scanResult] = await Promise.allSettled([uploadPromise, scanPromise])
@@ -220,6 +233,8 @@ export function Board() {
     } catch (err: any) {
       setExtractionError(err.message || 'Scan failed')
     }
+    // Cleanup timer
+    if (scanTimerRef.current) { clearInterval(scanTimerRef.current); scanTimerRef.current = null }
     setScanning(false); setUploading(false)
   }
 
@@ -418,13 +433,41 @@ export function Board() {
             <img src={scanPreview} alt="Whiteboard" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
           )}
 
-          {/* Scanning */}
+          {/* Scanning — progress bar + step labels */}
           {scanning && (
-            <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <Loader2 size={28} style={{ animation: 'spin .7s linear infinite', color: 'var(--purple)', margin: '0 auto 10px', display: 'block' }} />
-              <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: 'var(--text-secondary)' }}>
-                {uploading ? 'Uploading photo...' : "Scanning Ryan's whiteboard..."}
+            <div style={{ padding: '16px 0' }}>
+              {/* Progress bar */}
+              <div style={{ background: 'var(--bg)', borderRadius: 999, height: 8, overflow: 'hidden', marginBottom: 12 }}>
+                <div style={{
+                  height: '100%', borderRadius: 999,
+                  background: 'linear-gradient(90deg, #7C3AED, #9333EA, #A855F7)',
+                  width: `${Math.max(scanProgress, 5)}%`,
+                  transition: 'width 0.4s ease-out',
+                }} />
+              </div>
+              {/* Step label + spinner */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <Loader2 size={16} style={{ animation: 'spin .7s linear infinite', color: 'var(--purple)', flexShrink: 0 }} />
+                <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: 'var(--text-secondary)' }}>
+                  {scanStep || (uploading ? 'Uploading photo...' : 'Scanning...')}
+                </p>
+              </div>
+              {/* Elapsed time + reassurance */}
+              <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--muted)', textAlign: 'center' }}>
+                {scanElapsed}s elapsed
+                {scanElapsed >= 15 && scanElapsed < 30 && ' — AI is analyzing the handwriting...'}
+                {scanElapsed >= 30 && ' — still working, large images take longer...'}
               </p>
+              {/* Timeout warning */}
+              {scanElapsed >= 45 && (
+                <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 'var(--radius-sm)', background: '#FEF3C7', border: '1px solid #F59E0B', fontSize: 13, color: '#92400E' }}>
+                  ⚠️ This is taking longer than usual. You can wait or
+                  <button className="btn btn-ghost btn-sm" style={{ marginLeft: 6, fontSize: 12, padding: '2px 8px', minHeight: 24, color: '#92400E', textDecoration: 'underline' }}
+                    onClick={() => { if (scanTimerRef.current) { clearInterval(scanTimerRef.current); scanTimerRef.current = null }; setScanning(false); setUploading(false); setExtractionError('Scan was cancelled. Try a clearer or smaller photo.') }}>
+                    cancel
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -441,9 +484,18 @@ export function Board() {
 
           {/* Error */}
           {extractionError && (
-            <div style={{ padding: '12px 16px', borderRadius: 'var(--radius-sm)', background: 'var(--danger-bg)', color: 'var(--danger)', fontSize: 14 }}>
-              {extractionError}
-              <button className="btn btn-outline btn-sm btn-full" style={{ marginTop: 10 }} onClick={() => runScan(scanFile!)}>Retry</button>
+            <div style={{ padding: '14px 16px', borderRadius: 'var(--radius-sm)', background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B', fontSize: 14, lineHeight: 1.5 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 10 }}>
+                <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>❌</span>
+                <div>
+                  <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: 15 }}>Scan Failed</p>
+                  <p style={{ margin: 0, fontSize: 13, color: '#B91C1C' }}>{extractionError}</p>
+                </div>
+              </div>
+              <div className="row gap-sm">
+                <button className="btn btn-sm btn-full" style={{ background: '#991B1B', color: '#fff', border: 'none' }} onClick={() => { setExtractionError(''); runScan(scanFile!) }}>🔄 Retry Scan</button>
+                <button className="btn btn-ghost btn-sm btn-full" onClick={closeScanModal}>Close</button>
+              </div>
             </div>
           )}
 
