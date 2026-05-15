@@ -54,10 +54,49 @@ function getApiKey(): string {
   return key
 }
 
-// ─── File/Blob → Base64 (no CORS needed) ───────────────
+// ─── File/Blob → Base64 with compression (fixes iOS large photo timeout) ──
 async function fileOrBlobToBase64(source: File | Blob): Promise<{ base64: string; mimeType: string }> {
   const mimeType = source.type || 'image/jpeg'
-  return blobToBase64(source, mimeType)
+  const MAX_DIMENSION = 2048  // max width or height — keeps text legible
+  const JPEG_QUALITY = 0.82
+  const SIZE_THRESHOLD = 1 * 1024 * 1024  // only compress if > 1MB
+
+  // Small files: skip compression
+  if (source.size < SIZE_THRESHOLD && !mimeType.includes('heic')) {
+    return blobToBase64(source, mimeType)
+  }
+
+  // Large files or HEIC: resize + compress via canvas
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(source)
+    const img = new Image()
+    img.onload = () => {
+      try {
+        let { naturalWidth: w, naturalHeight: h } = img
+        // Scale down if either dimension exceeds max
+        if (w > MAX_DIMENSION || h > MAX_DIMENSION) {
+          const scale = MAX_DIMENSION / Math.max(w, h)
+          w = Math.round(w * scale)
+          h = Math.round(h * scale)
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = w; canvas.height = h
+        const ctx = canvas.getContext('2d')
+        if (!ctx) { reject(new Error('Canvas not supported')); return }
+        ctx.drawImage(img, 0, 0, w, h)
+        const dataUrl = canvas.toDataURL('image/jpeg', JPEG_QUALITY)
+        const base64 = dataUrl.split(',')[1]
+        URL.revokeObjectURL(url)
+        if (!base64) { reject(new Error('Image compression failed')); return }
+        resolve({ base64, mimeType: 'image/jpeg' })
+      } catch (err) {
+        URL.revokeObjectURL(url)
+        reject(err)
+      }
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Failed to load image for compression')) }
+    img.src = url
+  })
 }
 
 // ─── Image URL → Base64 (handles CORS gracefully) ───────
@@ -173,7 +212,7 @@ async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 2)
     try {
       // Add timeout via AbortController
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 60000) // 60s timeout (mobile needs more time)
       const res = await fetch(url, { ...options, signal: controller.signal })
       clearTimeout(timeoutId)
 
@@ -186,7 +225,7 @@ async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 2)
     } catch (err: any) {
       lastErr = err
       if (err.name === 'AbortError') {
-        lastErr = new Error('Request timed out (30s). The image may be too large — try a smaller photo.')
+        lastErr = new Error('Request timed out (60s). The image may be too large — try a smaller photo.')
       }
       if (attempt < maxRetries) await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000))
     }
@@ -263,13 +302,19 @@ export async function extractWhiteboardData(
     onProgress?.('Checking configuration...', 5)
     const apiKey = getApiKey()
 
-    // Step 1: Convert image to base64
+    // Step 1: Convert image to base64 (with compression for large iOS photos)
     onProgress?.('Loading image...', 10)
     let base64Data: { base64: string; mimeType: string }
     try {
       if (imageSource instanceof File || imageSource instanceof Blob) {
-        // Direct File/Blob — no CORS issues, fastest path
+        const fileSizeMB = (imageSource.size / (1024 * 1024)).toFixed(1)
+        if (imageSource.size > 1024 * 1024) {
+          onProgress?.(`Compressing photo (${fileSizeMB}MB)...`, 15)
+        }
+        // Direct File/Blob — compression handles large iOS HEIC photos
         base64Data = await fileOrBlobToBase64(imageSource)
+        const payloadKB = Math.round(base64Data.base64.length * 0.75 / 1024)
+        console.log(`[whiteboard] Image compressed: ${fileSizeMB}MB → ${payloadKB}KB payload`)
       } else {
         // URL string — fetch with CORS fallbacks
         base64Data = await imageUrlToBase64(imageSource)
@@ -277,7 +322,7 @@ export async function extractWhiteboardData(
     } catch (imgErr: any) {
       return { items: [], rawSummary: '', error: `Failed to load image: ${imgErr.message}` }
     }
-    onProgress?.('Image loaded', 25)
+    onProgress?.('Image ready', 25)
 
     // Validate base64 isn't empty
     if (!base64Data.base64 || base64Data.base64.length < 100) {
