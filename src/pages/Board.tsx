@@ -158,8 +158,8 @@ export function Board() {
     }, 1000)
 
     try {
-      // Upload to Firebase Storage (non-blocking — scan runs even if upload fails)
-      const uploadPromise = uploadPhoto(file).then(async ({ url }) => {
+      // Upload to Firebase Storage — truly fire-and-forget (never blocks scan)
+      uploadPhoto(file).then(async ({ url }) => {
         await addItem('photos', {
           url, fileName: file.name, caption: 'Whiteboard scan',
           tags: ['ryan-whiteboard'], source: 'ryan-whiteboard',
@@ -173,26 +173,19 @@ export function Board() {
       })
 
       // Scan using the File directly — no CORS fetch needed
-      const scanPromise = extractWhiteboardData(file, undefined, (step, pct) => {
+      const scanResult = await extractWhiteboardData(file, undefined, (step, pct) => {
         setScanStep(step); setScanProgress(pct)
       })
 
-      // Run both in parallel — upload failure doesn't block scan
-      const [, scanResult] = await Promise.allSettled([uploadPromise, scanPromise])
-
-      // Extract scan result
-      if (scanResult.status === 'rejected') {
-        setExtractionError(scanResult.reason?.message || 'AI scan failed')
+      // Process scan result immediately (upload may still be running)
+      if (scanResult.error) {
+        setExtractionError(scanResult.error)
+      } else if (scanResult.items.length === 0) {
+        setExtractionError('No readable items found on this whiteboard.')
       } else {
-        const result = scanResult.value
-        if (result.error) {
-          setExtractionError(result.error)
-        } else if (result.items.length === 0) {
-          setExtractionError('No readable items found on this whiteboard.')
-        } else {
           // Auto-accept high-confidence items, show review for the rest
-          const highConf = result.items.filter(i => i.confidence === 'high')
-          const needsReview = result.items.filter(i => i.confidence !== 'high')
+          const highConf = scanResult.items.filter(i => i.confidence === 'high')
+          const needsReview = scanResult.items.filter(i => i.confidence !== 'high')
 
           // Auto-create high-confidence items immediately
           let created = 0
@@ -222,13 +215,12 @@ export function Board() {
 
           if (needsReview.length > 0) {
             setExtractedItems(needsReview)
-            setExtractionSummary(result.rawSummary)
+            setExtractionSummary(scanResult.rawSummary)
           } else {
             // All items were high-confidence — auto-close after brief success
             setExtractionSummary(`✅ ${created} item${created !== 1 ? 's' : ''} auto-added to your Inbox`)
             setTimeout(() => closeScanModal(), 2500)
           }
-        }
       }
     } catch (err: any) {
       setExtractionError(err.message || 'Scan failed')
