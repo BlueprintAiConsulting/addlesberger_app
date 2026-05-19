@@ -122,6 +122,14 @@ async function fileOrBlobToBase64(source: File | Blob): Promise<{ base64: string
 
 // ─── Image URL → Base64 (handles CORS gracefully) ───────
 async function imageUrlToBase64(url: string): Promise<{ base64: string; mimeType: string }> {
+  // If the url is a base64 data URL, extract the base64 data directly
+  if (url.startsWith('data:')) {
+    const parts = url.split(',')
+    const mimeType = parts[0].match(/:(.*?);/)?.[1] || 'image/jpeg'
+    const base64 = parts[1]
+    return { base64, mimeType }
+  }
+
   // Try 1: Direct fetch (works when same-origin or CORS-enabled)
   try {
     const response = await fetch(url)
@@ -441,7 +449,12 @@ export async function extractWhiteboardData(
         return { items, rawSummary: parsed.summary || '' }
       } catch (modelErr: any) {
         lastError = modelErr.message
-        if (modelErr.message?.includes('timed out') || modelErr.message?.includes('Network')) {
+        if (
+          modelErr.message?.includes('timed out') ||
+          modelErr.message?.includes('Network') ||
+          modelErr.message?.includes('key') ||
+          modelErr.message?.includes('API error')
+        ) {
           throw modelErr
         }
         continue

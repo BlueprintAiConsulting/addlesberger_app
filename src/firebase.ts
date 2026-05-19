@@ -17,5 +17,7 @@ const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
 export const db = getFirestore(app)
 export const storage = getStorage(app)
+storage.maxUploadRetryTime = 3000
+storage.maxOperationRetryTime = 3000
 export const COMPANY_ID = import.meta.env.VITE_COMPANY_ID || 'default-company'
 export const ALLOWED_EMAILS = (import.meta.env.VITE_ALLOWED_EMAILS || '').split(',').map((e: string) => e.trim().toLowerCase()).filter(Boolean)
