@@ -192,20 +192,20 @@ export function Board() {
           for (const item of highConf) {
             await addItem('boardItems', {
               title: item.customerName || item.description.slice(0, 60) || 'Whiteboard item',
-              description: [item.address && `📍 ${item.address}`, item.phone && `📞 ${item.phone}`, item.jobType !== 'other' && `🔧 ${item.jobType}`, item.estimateAmount && `💰 $${item.estimateAmount.toLocaleString()}`, item.description].filter(Boolean).join('\n'),
-              category: item.jobType === 'repair' ? 'repair' : 'estimate',
+              description: [item.address && `📍 ${item.address}`, item.phone && `📞 ${item.phone}`, item.email && `📧 ${item.email}`, item.jobType !== 'other' && `🔧 ${item.jobType}`, item.estimateAmount && `💰 $${item.estimateAmount.toLocaleString()}`, item.scheduledDate && `📅 ${item.scheduledDate}`, item.description].filter(Boolean).join('\n'),
+              category: item.jobType === 'repair' ? 'repair' : item.jobType === 'estimate' ? 'estimate' : 'estimate',
               priority: item.priority, status: 'inbox' as BoardStatus,
               source: 'ryan-whiteboard' as UpdateSource,
-              assignedTo: null, dueDate: null, createdBy: user?.uid || '', archivedAt: null,
+              assignedTo: null, dueDate: item.scheduledDate ? Timestamp.fromDate(new Date(item.scheduledDate + 'T00:00:00')) : null, createdBy: user?.uid || '', archivedAt: null,
             })
             if (item.customerName && (item.address || item.description)) {
               await addItem('jobs', {
                 customerName: item.customerName, customerPhone: item.phone || '',
-                customerEmail: '', address: item.address || '',
+                customerEmail: item.email || '', address: item.address || '',
                 description: item.description || '', status: 'lead',
                 estimateAmount: item.estimateAmount, invoiceAmount: null, paidAmount: null,
                 notes: `Auto-extracted from whiteboard on ${format(new Date(), 'MMM d, yyyy')}`,
-                scheduledDate: null, completedDate: null,
+                scheduledDate: item.scheduledDate ? Timestamp.fromDate(new Date(item.scheduledDate + 'T00:00:00')) : null, completedDate: null,
                 createdBy: user?.uid || '', archivedAt: null,
               })
             }
@@ -248,24 +248,26 @@ export function Board() {
           description: [
             item.address && `📍 ${item.address}`,
             item.phone && `📞 ${item.phone}`,
+            item.email && `📧 ${item.email}`,
             item.jobType !== 'other' && `🔧 ${item.jobType}`,
             item.estimateAmount && `💰 $${item.estimateAmount.toLocaleString()}`,
+            item.scheduledDate && `📅 ${item.scheduledDate}`,
             item.description,
           ].filter(Boolean).join('\n'),
-          category: item.jobType === 'repair' ? 'repair' : 'estimate',
+          category: item.jobType === 'repair' ? 'repair' : item.jobType === 'estimate' ? 'estimate' : 'estimate',
           priority: item.priority, status: 'inbox' as BoardStatus,
           source: 'ryan-whiteboard' as UpdateSource,
-          assignedTo: null, dueDate: null,
+          assignedTo: null, dueDate: item.scheduledDate ? Timestamp.fromDate(new Date(item.scheduledDate + 'T00:00:00')) : null,
           createdBy: user?.uid || '', archivedAt: null,
         })
         if (item.customerName && (item.address || item.description)) {
           await addItem('jobs', {
             customerName: item.customerName, customerPhone: item.phone || '',
-            customerEmail: '', address: item.address || '',
+            customerEmail: item.email || '', address: item.address || '',
             description: item.description || '', status: 'lead',
             estimateAmount: item.estimateAmount, invoiceAmount: null, paidAmount: null,
             notes: `Auto-extracted from whiteboard on ${format(new Date(), 'MMM d, yyyy')}`,
-            scheduledDate: null, completedDate: null,
+            scheduledDate: item.scheduledDate ? Timestamp.fromDate(new Date(item.scheduledDate + 'T00:00:00')) : null, completedDate: null,
             createdBy: user?.uid || '', archivedAt: null,
           })
         }
@@ -527,8 +529,11 @@ export function Board() {
                         <p style={{ margin: '0 0 2px', fontWeight: 600, fontSize: 15 }}>{item.customerName || 'Unknown Customer'}</p>
                         {item.address && <p style={{ margin: '0 0 2px', fontSize: 13, color: 'var(--text-secondary)' }}>📍 {item.address}</p>}
                         {item.phone && <p style={{ margin: '0 0 2px', fontSize: 13, color: 'var(--text-secondary)' }}>📞 {item.phone}</p>}
+                        {item.email && <p style={{ margin: '0 0 2px', fontSize: 13, color: 'var(--text-secondary)' }}>📧 {item.email}</p>}
+                        {item.scheduledDate && <p style={{ margin: '0 0 2px', fontSize: 13, color: 'var(--info)' }}>📅 {item.scheduledDate}</p>}
                         <div className="row gap-sm" style={{ marginTop: 4 }}>
                           <span className="badge" style={{ background: 'var(--bg)', fontSize: 11 }}>{item.jobType}</span>
+                          {item.inkColor && item.inkColor !== 'unknown' && <span className="badge" style={{ background: item.inkColor === 'red' ? '#FEE2E2' : item.inkColor === 'green' ? '#D1FAE5' : item.inkColor === 'blue' ? '#DBEAFE' : '#F1F5F9', color: item.inkColor === 'red' ? '#B91C1C' : item.inkColor === 'green' ? '#047857' : item.inkColor === 'blue' ? '#1D4ED8' : '#334155', fontSize: 10 }}>{item.inkColor} ink</span>}
                           {item.estimateAmount != null && <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--brand)' }}>${item.estimateAmount.toLocaleString()}</span>}
                         </div>
                         {item.description && <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--muted)', lineHeight: 1.5 }}>{item.description}</p>}
@@ -539,11 +544,15 @@ export function Board() {
                         <div><label className="label">Address</label><input className="input" value={item.address} onChange={e => updateExtractedItem(idx, 'address', e.target.value)} /></div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                           <div><label className="label">Phone</label><input className="input" value={item.phone} onChange={e => updateExtractedItem(idx, 'phone', e.target.value)} /></div>
+                          <div><label className="label">Email</label><input className="input" type="email" value={item.email} onChange={e => updateExtractedItem(idx, 'email', e.target.value)} /></div>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                           <div><label className="label">Estimate $</label><input className="input" type="number" value={item.estimateAmount ?? ''} onChange={e => updateExtractedItem(idx, 'estimateAmount', e.target.value ? Number(e.target.value) : null)} /></div>
+                          <div><label className="label">Date</label><input className="input" type="date" value={item.scheduledDate ?? ''} onChange={e => updateExtractedItem(idx, 'scheduledDate', e.target.value || null)} /></div>
                         </div>
                         <div><label className="label">Job Type</label>
                           <select className="input select" value={item.jobType} onChange={e => updateExtractedItem(idx, 'jobType', e.target.value)}>
-                            {['shingle','rubber roof','metal roof','repair','gutter','flashing','inspection','other'].map(t => <option key={t} value={t}>{t}</option>)}
+                            {['shingle','rubber roof','metal roof','repair','gutter','flashing','inspection','estimate','other'].map(t => <option key={t} value={t}>{t}</option>)}
                           </select>
                         </div>
                         <div><label className="label">Notes</label><textarea className="input textarea" value={item.description} onChange={e => updateExtractedItem(idx, 'description', e.target.value)} rows={2} /></div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, FormEvent } from 'react'
-import { orderBy } from 'firebase/firestore'
+import { orderBy, Timestamp } from 'firebase/firestore'
 import { format } from 'date-fns'
 import { useLocation } from 'react-router-dom'
 import { Camera, CheckCircle, Image as ImageIcon, Trash2, Sparkles, Loader2, ChevronDown, ChevronUp, Plus, AlertTriangle, Crop } from 'lucide-react'
@@ -230,16 +230,18 @@ export function Photos() {
           description: [
             item.address && `📍 ${item.address}`,
             item.phone && `📞 ${item.phone}`,
+            item.email && `📧 ${item.email}`,
             item.jobType && item.jobType !== 'other' && `🔧 ${item.jobType}`,
             item.estimateAmount && `💰 $${item.estimateAmount.toLocaleString()}`,
+            item.scheduledDate && `📅 ${item.scheduledDate}`,
             item.description,
           ].filter(Boolean).join('\n'),
-          category: item.jobType === 'repair' ? 'repair' : 'estimate',
+          category: item.jobType === 'repair' ? 'repair' : item.jobType === 'estimate' ? 'estimate' : 'estimate',
           priority: item.priority,
           status: 'inbox',
           source: 'ryan-whiteboard',
           assignedTo: null,
-          dueDate: null,
+          dueDate: item.scheduledDate ? Timestamp.fromDate(new Date(item.scheduledDate + 'T00:00:00')) : null,
           createdBy: user?.uid || '',
           archivedAt: null,
         })
@@ -249,7 +251,7 @@ export function Photos() {
           await addItem('jobs', {
             customerName: item.customerName,
             customerPhone: item.phone || '',
-            customerEmail: '',
+            customerEmail: item.email || '',
             address: item.address || '',
             description: item.description || '',
             status: 'lead',
@@ -257,7 +259,7 @@ export function Photos() {
             invoiceAmount: null,
             paidAmount: null,
             notes: `Auto-extracted from whiteboard photo on ${format(new Date(), 'MMM d, yyyy')}`,
-            scheduledDate: null,
+            scheduledDate: item.scheduledDate ? Timestamp.fromDate(new Date(item.scheduledDate + 'T00:00:00')) : null,
             completedDate: null,
             createdBy: user?.uid || '',
             archivedAt: null,
@@ -371,8 +373,8 @@ export function Photos() {
             <img src={previewUrl} alt="Preview" style={{ width: '100%', maxHeight: 240, objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
           )}
           <div>
-            <label className="label">Notes / AI Direction</label>
-            <textarea className="input textarea" value={caption} onChange={e => setCaption(e.target.value)} placeholder="Describe what's in this photo — for whiteboard scans, add directions like 'focus on the left column' or 'these are all gutter jobs'" rows={3} />
+            <label className="label">Caption (optional)</label>
+            <input className="input" value={caption} onChange={e => setCaption(e.target.value)} placeholder="Quick label for this photo" />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
@@ -584,8 +586,11 @@ export function Photos() {
                           </p>
                           {item.address && <p style={{ margin: '0 0 2px', fontSize: 13, color: 'var(--text-secondary)' }}>📍 {item.address}</p>}
                           {item.phone && <p style={{ margin: '0 0 2px', fontSize: 13, color: 'var(--text-secondary)' }}>📞 {item.phone}</p>}
+                          {item.email && <p style={{ margin: '0 0 2px', fontSize: 13, color: 'var(--text-secondary)' }}>📧 {item.email}</p>}
+                          {item.scheduledDate && <p style={{ margin: '0 0 2px', fontSize: 13, color: 'var(--info)' }}>📅 {item.scheduledDate}</p>}
                           <div className="row gap-sm" style={{ marginTop: 4 }}>
                             <span className="badge" style={{ background: 'var(--bg)', fontSize: 11 }}>{item.jobType}</span>
+                            {item.inkColor && item.inkColor !== 'unknown' && <span className="badge" style={{ background: item.inkColor === 'red' ? '#FEE2E2' : item.inkColor === 'green' ? '#D1FAE5' : item.inkColor === 'blue' ? '#DBEAFE' : '#F1F5F9', color: item.inkColor === 'red' ? '#B91C1C' : item.inkColor === 'green' ? '#047857' : item.inkColor === 'blue' ? '#1D4ED8' : '#334155', fontSize: 10 }}>{item.inkColor} ink</span>}
                             {item.estimateAmount != null && (
                               <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--brand)' }}>
                                 ${item.estimateAmount.toLocaleString()}
@@ -615,8 +620,18 @@ export function Photos() {
                               <input className="input" value={item.phone} onChange={e => updateExtractedItem(idx, 'phone', e.target.value)} />
                             </div>
                             <div>
+                              <label className="label">Email</label>
+                              <input className="input" type="email" value={item.email} onChange={e => updateExtractedItem(idx, 'email', e.target.value)} />
+                            </div>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                            <div>
                               <label className="label">Estimate $</label>
                               <input className="input" type="number" value={item.estimateAmount ?? ''} onChange={e => updateExtractedItem(idx, 'estimateAmount', e.target.value ? Number(e.target.value) : null)} />
+                            </div>
+                            <div>
+                              <label className="label">Date</label>
+                              <input className="input" type="date" value={item.scheduledDate ?? ''} onChange={e => updateExtractedItem(idx, 'scheduledDate', e.target.value || null)} />
                             </div>
                           </div>
                           <div>
@@ -629,6 +644,7 @@ export function Photos() {
                               <option value="gutter">Gutter</option>
                               <option value="flashing">Flashing</option>
                               <option value="inspection">Inspection</option>
+                              <option value="estimate">Estimate</option>
                               <option value="other">Other</option>
                             </select>
                           </div>

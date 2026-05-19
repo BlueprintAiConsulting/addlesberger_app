@@ -2,9 +2,12 @@ export interface ExtractedItem {
   customerName: string
   address: string
   phone: string
+  email: string
   jobType: string
   description: string
   estimateAmount: number | null
+  scheduledDate: string | null  // ISO date string e.g. "2024-01-23"
+  inkColor: 'red' | 'green' | 'blue' | 'black' | 'unknown'
   priority: 'normal' | 'urgent'
   confidence: 'high' | 'medium' | 'low'
 }
@@ -17,29 +20,47 @@ export interface ExtractionResult {
 
 const EXTRACTION_PROMPT = `You are a highly skilled OCR specialist analyzing a photo of a roofing contractor's whiteboard. The contractor (Ryan) writes customer info, job details, and notes by hand — often in messy handwriting, with abbreviations.
 
-CRITICAL RULES FOR ACCURACY:
+CRITICAL: INK COLOR MATTERS — Ryan color-codes his whiteboard:
+- RED ink = REPAIRS ("Repair" prefix is common)
+- GREEN ink = ESTIMATES ("Est" prefix is common) or important callouts
+- BLUE ink = Financial tracking, metrics, or secondary info
+- BLACK ink = General leads, contacts, notes, customer info
+
+RULES FOR ACCURACY:
 1. LOOK CAREFULLY at each word — handwritten text can be ambiguous. Take your best guess.
 2. If there's GLARE, SHADOW, or the image is at an ANGLE, describe what you can see and flag confidence as "low".
-3. ABBREVIATIONS are common: "shgl" = shingle, "rpr" = repair, "gtr" = gutter, "flsh" = flashing, "ins" = inspection, "rub" = rubber roof, "mtl" = metal.
+3. ABBREVIATIONS are common: "shgl" = shingle, "rpr" = repair, "gtr" = gutter, "flsh" = flashing, "ins" = inspection, "rub" = rubber roof, "mtl" = metal, "Est" = estimate, "Leg up" = location name.
 4. PHONE NUMBERS may have dashes, dots, or no separator — normalize to xxx-xxx-xxxx format.
-5. DOLLAR AMOUNTS may be written as "$5k", "$5,000", "5000" — normalize to a number.
-6. Items CROSSED OUT or with a line through them should be SKIPPED.
-7. If text is CIRCLED or STARRED or has an arrow, that usually means URGENT.
-8. Look for COLUMN or SECTION separations on the board — treat each section independently.
+5. EMAIL ADDRESSES — look for "@" and ".com" / ".net" etc. Extract them.
+6. DOLLAR AMOUNTS may be written as "$5k", "$5,000", "5000" — normalize to a number.
+7. DATES — look for date formats like "1/23", "8/25", "10/14", "10/20". These are scheduled dates. Return as ISO format "YYYY-MM-DD". If no year is written, assume the current year or the most logical upcoming year.
+8. Items CROSSED OUT or with a line through them should be SKIPPED.
+9. If text is CIRCLED or STARRED or has an arrow, that usually means URGENT.
+10. Look for COLUMN or SECTION separations on the board — treat each section independently.
+
+SKIP PERSONAL CONTENT:
+- Ignore personal goals lists ("2024 Goals", bucket lists, fitness goals)
+- Ignore fitness/exercise tracking ("Bike Elevation", mileage logs)
+- Ignore sports scores, records, or game stats
+- Ignore grocery lists or personal reminders
+- ONLY extract business-related items: customers, jobs, repairs, estimates, leads, contacts
 
 Extract ALL distinct customers/jobs visible. For each one return JSON:
 - customerName: the customer's name (best guess from handwriting)
 - address: street address if visible (include city/state if written)
 - phone: phone number if visible, normalized to xxx-xxx-xxxx
-- jobType: one of "shingle", "rubber roof", "metal roof", "repair", "gutter", "flashing", "inspection", "other"
-- description: raw notes/details (materials, measurements, special instructions)
+- email: email address if visible, otherwise empty string
+- jobType: one of "shingle", "rubber roof", "metal roof", "repair", "gutter", "flashing", "inspection", "estimate", "other"
+- description: raw notes/details (materials, measurements, special instructions, insurance company if mentioned)
 - estimateAmount: dollar amount if visible, otherwise null
+- scheduledDate: date if visible, as ISO "YYYY-MM-DD" format, otherwise null
+- inkColor: the color of ink used for this entry — "red", "green", "blue", "black", or "unknown"
 - priority: "urgent" if marked urgent/ASAP/rush/circled/starred, otherwise "normal"
 - confidence: "high" if clearly readable, "medium" if partially legible, "low" if guessing
 
 Return ONLY valid JSON, no markdown fences:
 {
-  "summary": "...",
+  "summary": "Brief overview of what's on the board",
   "items": [ { ... } ]
 }
 
@@ -241,6 +262,11 @@ function normalizeItem(item: any): ExtractedItem {
   else if (phone.length === 11 && phone.startsWith('1')) phone = `${phone.slice(1,4)}-${phone.slice(4,7)}-${phone.slice(7)}`
   else phone = item.phone || ''
 
+  // Email normalization
+  let email = (item.email || '').trim().toLowerCase()
+  // Basic sanity — must contain @ and a dot
+  if (email && (!email.includes('@') || !email.includes('.'))) email = ''
+
   // Estimate normalization — handles "$5k", "5,000", "5000", etc.
   let estimateAmount: number | null = null
   if (item.estimateAmount != null) {
@@ -250,14 +276,34 @@ function normalizeItem(item: any): ExtractedItem {
     if (!isNaN(n) && n > 0) estimateAmount = n
   }
 
-  const validTypes = ['shingle','rubber roof','metal roof','repair','gutter','flashing','inspection','other']
+  // Date normalization — AI returns ISO or partial dates
+  let scheduledDate: string | null = null
+  if (item.scheduledDate) {
+    const d = new Date(item.scheduledDate)
+    if (!isNaN(d.getTime())) {
+      scheduledDate = d.toISOString().split('T')[0]
+    }
+  }
+
+  // Ink color → job type inference when AI returns "other"
+  const inkColor = ['red','green','blue','black'].includes(item.inkColor?.toLowerCase()) ? item.inkColor.toLowerCase() : 'unknown'
+  let jobType = (item.jobType || 'other').toLowerCase()
+  const validTypes = ['shingle','rubber roof','metal roof','repair','gutter','flashing','inspection','estimate','other']
+  if (!validTypes.includes(jobType)) jobType = 'other'
+  // If AI couldn't determine type, infer from ink color
+  if (jobType === 'other' && inkColor === 'red') jobType = 'repair'
+  if (jobType === 'other' && inkColor === 'green') jobType = 'estimate'
+
   return {
     customerName: (item.customerName || '').trim(),
     address: (item.address || '').trim(),
     phone,
-    jobType: validTypes.includes(item.jobType?.toLowerCase()) ? item.jobType.toLowerCase() : 'other',
+    email,
+    jobType,
     description: (item.description || '').trim(),
     estimateAmount,
+    scheduledDate,
+    inkColor: inkColor as ExtractedItem['inkColor'],
     priority: item.priority === 'urgent' ? 'urgent' : 'normal',
     confidence: ['high','medium','low'].includes(item.confidence) ? item.confidence : 'medium',
   }
