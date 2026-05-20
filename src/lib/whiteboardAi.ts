@@ -18,6 +18,8 @@ export interface ExtractionResult {
   error?: string
 }
 
+const currentYear = new Date().getFullYear()
+
 const EXTRACTION_PROMPT = `You are a highly skilled OCR specialist analyzing a photo of a roofing contractor's whiteboard. The contractor (Ryan) writes customer info, job details, and notes by hand — often in messy handwriting, with abbreviations.
 
 CRITICAL: INK COLOR MATTERS — Ryan color-codes his whiteboard:
@@ -33,13 +35,13 @@ RULES FOR ACCURACY:
 4. PHONE NUMBERS may have dashes, dots, or no separator — normalize to xxx-xxx-xxxx format.
 5. EMAIL ADDRESSES — look for "@" and ".com" / ".net" etc. Extract them.
 6. DOLLAR AMOUNTS may be written as "$5k", "$5,000", "5000" — normalize to a number.
-7. DATES — look for date formats like "1/23", "8/25", "10/14", "10/20". These are scheduled dates. Return as ISO format "YYYY-MM-DD". If no year is written, assume the current year or the most logical upcoming year.
+7. DATES — look for date formats like "1/23", "8/25", "10/14", "10/20". These are scheduled dates. Return as ISO format "YYYY-MM-DD". The current year is ${currentYear}. If no year is written, ALWAYS use ${currentYear} as the year.
 8. Items CROSSED OUT or with a line through them should be SKIPPED.
 9. If text is CIRCLED or STARRED or has an arrow, that usually means URGENT.
 10. Look for COLUMN or SECTION separations on the board — treat each section independently.
 
 SKIP PERSONAL CONTENT:
-- Ignore personal goals lists ("2024 Goals", bucket lists, fitness goals)
+- Ignore personal goals lists (e.g. "Goals", "2024 Goals", bucket lists, fitness goals)
 - Ignore fitness/exercise tracking ("Bike Elevation", mileage logs)
 - Ignore sports scores, records, or game stats
 - Ignore grocery lists or personal reminders
