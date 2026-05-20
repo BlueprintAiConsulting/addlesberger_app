@@ -95,14 +95,14 @@ export function Login() {
 
         <form onSubmit={handleSubmit} className="stack stack-md">
           <div>
-            <label className="label">Username or Email</label>
-            <input className="input" type="text" placeholder="charleen"
+            <label htmlFor="email" className="label">Username or Email</label>
+            <input id="email" name="email" className="input" type="text" placeholder="charleen"
               value={email} onChange={(e) => setEmail(e.target.value)}
               required autoComplete="username" autoCapitalize="none" />
           </div>
           <div>
-            <label className="label">Password</label>
-            <input className="input" type="password" placeholder="••••••••"
+            <label htmlFor="password" className="label">Password</label>
+            <input id="password" name="password" className="input" type="password" placeholder="••••••••"
               value={password} onChange={(e) => setPassword(e.target.value)}
               required minLength={6} autoComplete="current-password" />
           </div>

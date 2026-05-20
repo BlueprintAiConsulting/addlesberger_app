@@ -244,13 +244,13 @@ export function Estimates() {
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editEstimate ? 'Edit Estimate' : 'New Estimate'}>
         <form onSubmit={handleSubmitEstimate} className="stack stack-md">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div><label className="label">Customer</label><input className="input" value={customerName} onChange={e => setCustomerName(e.target.value)} required /></div>
-            <div><label className="label">Address</label><input className="input" value={address} onChange={e => setAddress(e.target.value)} required /></div>
+            <div><label htmlFor="estimateCustomer" className="label">Customer</label><input id="estimateCustomer" name="customerName" autoComplete="name" className="input" value={customerName} onChange={e => setCustomerName(e.target.value)} required /></div>
+            <div><label htmlFor="estimateAddress" className="label">Address</label><input id="estimateAddress" name="address" autoComplete="street-address" className="input" value={address} onChange={e => setAddress(e.target.value)} required /></div>
           </div>
 
           <div>
-            <label className="label">Link to Job (optional)</label>
-            <select className="input select" value={jobId || ''} onChange={e => setJobId(e.target.value || null)}>
+            <label htmlFor="estimateJobId" className="label">Link to Job (optional)</label>
+            <select id="estimateJobId" name="jobId" className="input select" value={jobId || ''} onChange={e => setJobId(e.target.value || null)}>
               <option value="">No job linked</option>
               {jobs.filter(j => !j.archivedAt).map(j => (
                 <option key={j.id} value={j.id}>{j.customerName} — {j.address}</option>
@@ -357,7 +357,7 @@ export function Estimates() {
             </div>
           )}
 
-          <div><label className="label">Notes</label><textarea className="input textarea" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Terms, conditions, etc." /></div>
+          <div><label htmlFor="estimateNotes" className="label">Notes</label><textarea id="estimateNotes" name="notes" className="input textarea" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Terms, conditions, etc." /></div>
 
           <div className="row gap-sm" style={{ justifyContent: 'flex-end' }}>
             {editEstimate && (
@@ -378,15 +378,15 @@ export function Estimates() {
       {/* Template Create/Edit Modal */}
       <Modal open={templateModalOpen} onClose={() => setTemplateModalOpen(false)} title={editTemplate ? 'Edit Template' : 'New Template'}>
         <form onSubmit={handleSubmitTemplate} className="stack stack-md">
-          <div><label className="label">Template Name</label><input className="input" value={templateName} onChange={e => setTemplateName(e.target.value)} required placeholder='e.g. "Standard Tear-Off & Replace"' /></div>
+          <div><label htmlFor="templateName" className="label">Template Name</label><input id="templateName" name="name" className="input" value={templateName} onChange={e => setTemplateName(e.target.value)} required placeholder='e.g. "Standard Tear-Off & Replace"' /></div>
           <div>
             <label className="label">Default Line Items</label>
             {templateLines.map((li, idx) => (
               <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 8, marginBottom: 8 }}>
-                <input className="input" placeholder="Description" value={li.description} onChange={e => { const u = [...templateLines]; u[idx].description = e.target.value; setTemplateLines(u) }} style={{ minHeight: 40 }} />
-                <input className="input" type="number" placeholder="Qty" value={li.defaultQty} onChange={e => { const u = [...templateLines]; u[idx].defaultQty = parseFloat(e.target.value) || 0; setTemplateLines(u) }} style={{ minHeight: 40 }} />
-                <input className="input" type="number" placeholder="Price" value={li.defaultUnitPrice} onChange={e => { const u = [...templateLines]; u[idx].defaultUnitPrice = parseFloat(e.target.value) || 0; setTemplateLines(u) }} style={{ minHeight: 40 }} />
-                {templateLines.length > 1 && <button type="button" className="btn btn-ghost btn-sm" onClick={() => setTemplateLines(templateLines.filter((_, i) => i !== idx))} style={{ minHeight: 40, padding: '0 8px' }}>✕</button>}
+                <input id={`templateLineDesc-${idx}`} name={`description-${idx}`} className="input" placeholder="Description" value={li.description} onChange={e => { const u = [...templateLines]; u[idx].description = e.target.value; setTemplateLines(u) }} style={{ minHeight: 40 }} aria-label="Description" />
+                <input id={`templateLineQty-${idx}`} name={`qty-${idx}`} className="input" type="number" placeholder="Qty" value={li.defaultQty} onChange={e => { const u = [...templateLines]; u[idx].defaultQty = parseFloat(e.target.value) || 0; setTemplateLines(u) }} style={{ minHeight: 40 }} aria-label="Quantity" />
+                <input id={`templateLinePrice-${idx}`} name={`unitPrice-${idx}`} className="input" type="number" placeholder="Price" value={li.defaultUnitPrice} onChange={e => { const u = [...templateLines]; u[idx].defaultUnitPrice = parseFloat(e.target.value) || 0; setTemplateLines(u) }} style={{ minHeight: 40 }} aria-label="Price" />
+                {templateLines.length > 1 && <button type="button" className="btn btn-ghost btn-sm" onClick={() => setTemplateLines(templateLines.filter((_, i) => i !== idx))} style={{ minHeight: 40, padding: '0 8px' }} aria-label="Remove Line">✕</button>}
               </div>
             ))}
             <button type="button" className="btn btn-outline btn-sm" onClick={() => setTemplateLines([...templateLines, { description: '', defaultQty: 1, defaultUnitPrice: 0, unit: 'each' }])}><Plus size={14} /> Add Line</button>

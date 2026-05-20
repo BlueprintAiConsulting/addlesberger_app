@@ -84,9 +84,9 @@ export function Settings() {
       {/* Edit company modal */}
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit Company">
         <div className="stack stack-md">
-          <div><label className="label">Company Name</label><input className="input" value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="Your Roofing Co." /></div>
-          <div><label className="label">Phone</label><input className="input" type="tel" value={companyPhone} onChange={e => setCompanyPhone(e.target.value)} placeholder="555-0123" /></div>
-          <div><label className="label">Email</label><input className="input" type="email" value={companyEmail} onChange={e => setCompanyEmail(e.target.value)} placeholder="info@company.com" /></div>
+          <div><label htmlFor="companyName" className="label">Company Name</label><input id="companyName" name="companyName" autoComplete="organization" className="input" value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="Your Roofing Co." /></div>
+          <div><label htmlFor="companyPhone" className="label">Phone</label><input id="companyPhone" name="companyPhone" autoComplete="tel" className="input" type="tel" value={companyPhone} onChange={e => setCompanyPhone(e.target.value)} placeholder="555-0123" /></div>
+          <div><label htmlFor="companyEmail" className="label">Email</label><input id="companyEmail" name="companyEmail" autoComplete="email" className="input" type="email" value={companyEmail} onChange={e => setCompanyEmail(e.target.value)} placeholder="info@company.com" /></div>
           <button className="btn btn-primary btn-full" onClick={handleSave}>Save</button>
         </div>
       </Modal>

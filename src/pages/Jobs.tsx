@@ -123,26 +123,26 @@ export function Jobs() {
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="New Job">
         <form onSubmit={handleCreate} className="stack stack-md">
           <div>
-            <label className="label">Customer Name</label>
-            <input className="input" value={customerName} onChange={e => setCustomerName(e.target.value)} required placeholder="Full name" />
+            <label htmlFor="jobCustomerName" className="label">Customer Name</label>
+            <input id="jobCustomerName" name="customerName" autoComplete="name" className="input" value={customerName} onChange={e => setCustomerName(e.target.value)} required placeholder="Full name" />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label className="label">Phone</label>
-              <input className="input" type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="555-0123" />
+              <label htmlFor="jobCustomerPhone" className="label">Phone</label>
+              <input id="jobCustomerPhone" name="customerPhone" autoComplete="tel" className="input" type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="555-0123" />
             </div>
             <div>
-              <label className="label">Email</label>
-              <input className="input" type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} placeholder="Optional" />
+              <label htmlFor="jobCustomerEmail" className="label">Email</label>
+              <input id="jobCustomerEmail" name="customerEmail" autoComplete="email" className="input" type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} placeholder="Optional" />
             </div>
           </div>
           <div>
-            <label className="label">Address</label>
-            <input className="input" value={address} onChange={e => setAddress(e.target.value)} required placeholder="Job site address" />
+            <label htmlFor="jobAddress" className="label">Address</label>
+            <input id="jobAddress" name="address" autoComplete="street-address" className="input" value={address} onChange={e => setAddress(e.target.value)} required placeholder="Job site address" />
           </div>
           <div>
-            <label className="label">Description</label>
-            <textarea className="input textarea" value={description} onChange={e => setDescription(e.target.value)} placeholder="Scope of work" />
+            <label htmlFor="jobDescription" className="label">Description</label>
+            <textarea id="jobDescription" name="description" className="input textarea" value={description} onChange={e => setDescription(e.target.value)} placeholder="Scope of work" />
           </div>
           <button type="submit" className="btn btn-primary btn-full">Create Job</button>
         </form>

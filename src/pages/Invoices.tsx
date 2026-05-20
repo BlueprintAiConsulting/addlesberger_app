@@ -426,27 +426,27 @@ export function Invoices() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div><label className="label">Client Name</label><input className="input" value={clientName} onChange={e => setClientName(e.target.value)} required /></div>
-            <div><label className="label">Invoice Date</label><input className="input" type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} /></div>
+            <div><label htmlFor="invoiceClientName" className="label">Client Name</label><input id="invoiceClientName" name="clientName" autoComplete="name" className="input" value={clientName} onChange={e => setClientName(e.target.value)} required /></div>
+            <div><label htmlFor="invoiceDate" className="label">Invoice Date</label><input id="invoiceDate" name="invoiceDate" className="input" type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} /></div>
           </div>
 
-          <div><label className="label">Client Address</label><input className="input" value={clientAddress} onChange={e => setClientAddress(e.target.value)} /></div>
+          <div><label htmlFor="invoiceClientAddress" className="label">Client Address</label><input id="invoiceClientAddress" name="clientAddress" autoComplete="street-address" className="input" value={clientAddress} onChange={e => setClientAddress(e.target.value)} /></div>
 
           <div>
-            <label className="label">Services Performed</label>
-            <textarea className="input textarea" value={servicesText} onChange={e => setServicesText(e.target.value)} style={{ minHeight: 140 }} placeholder="• Service line items..." />
+            <label htmlFor="invoiceServices" className="label">Services Performed</label>
+            <textarea id="invoiceServices" name="servicesText" className="input textarea" value={servicesText} onChange={e => setServicesText(e.target.value)} style={{ minHeight: 140 }} placeholder="• Service line items..." />
           </div>
 
           <div>
-            <label className="label">Warranty</label>
-            <textarea className="input textarea" value={warrantyText} onChange={e => setWarrantyText(e.target.value)} style={{ minHeight: 80 }} />
+            <label htmlFor="invoiceWarranty" className="label">Warranty</label>
+            <textarea id="invoiceWarranty" name="warrantyText" className="input textarea" value={warrantyText} onChange={e => setWarrantyText(e.target.value)} style={{ minHeight: 80 }} />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div><label className="label">Total ($)</label><input className="input" type="number" value={total} onChange={e => setTotal(e.target.value)} placeholder="0.00" required /></div>
+            <div><label htmlFor="invoiceTotal" className="label">Total ($)</label><input id="invoiceTotal" name="total" className="input" type="number" value={total} onChange={e => setTotal(e.target.value)} placeholder="0.00" required /></div>
             <div>
-              <label className="label">Payment Status</label>
-              <select className="input select" value={paymentStatus} onChange={e => setPaymentStatus(e.target.value as InvoicePaymentStatus)}>
+              <label htmlFor="invoicePaymentStatus" className="label">Payment Status</label>
+              <select id="invoicePaymentStatus" name="paymentStatus" className="input select" value={paymentStatus} onChange={e => setPaymentStatus(e.target.value as InvoicePaymentStatus)}>
                 {Object.entries(T.INVOICE_PAYMENT_STATUS_LABELS).map(([k, v]) => (
                   <option key={k} value={k}>{v}</option>
                 ))}
@@ -454,9 +454,9 @@ export function Invoices() {
             </div>
           </div>
 
-          <div><label className="label">Payment Instructions</label><input className="input" value={paymentInstructions} onChange={e => setPaymentInstructions(e.target.value)} /></div>
-          <div><label className="label">Thank-You Text</label><input className="input" value={thankYouText} onChange={e => setThankYouText(e.target.value)} /></div>
-          <div><label className="label">License #</label><input className="input" value={licenseText} onChange={e => setLicenseText(e.target.value)} /></div>
+          <div><label htmlFor="invoicePaymentInstructions" className="label">Payment Instructions</label><input id="invoicePaymentInstructions" name="paymentInstructions" className="input" value={paymentInstructions} onChange={e => setPaymentInstructions(e.target.value)} /></div>
+          <div><label htmlFor="invoiceThankYou" className="label">Thank-You Text</label><input id="invoiceThankYou" name="thankYouText" className="input" value={thankYouText} onChange={e => setThankYouText(e.target.value)} /></div>
+          <div><label htmlFor="invoiceLicense" className="label">License #</label><input id="invoiceLicense" name="licenseText" className="input" value={licenseText} onChange={e => setLicenseText(e.target.value)} /></div>
 
           <div className="row gap-sm" style={{ justifyContent: 'flex-end' }}>
             {editInvoice && (
@@ -473,15 +473,15 @@ export function Invoices() {
       <Modal open={templateModalOpen} onClose={() => setTemplateModalOpen(false)} title={editTemplate ? 'Edit Template' : 'New Invoice Template'}>
         <form onSubmit={handleSubmitTemplate} className="stack stack-md">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div><label className="label">Template Name</label><input className="input" value={tName} onChange={e => setTName(e.target.value)} required placeholder='e.g. "Shingle Roof"' /></div>
-            <div><label className="label">Job Type</label><input className="input" value={tJobType} onChange={e => setTJobType(e.target.value)} placeholder="shingle, rubber, metal, repair" /></div>
+            <div><label htmlFor="templateName" className="label">Template Name</label><input id="templateName" name="tName" className="input" value={tName} onChange={e => setTName(e.target.value)} required placeholder='e.g. "Shingle Roof"' /></div>
+            <div><label htmlFor="templateJobType" className="label">Job Type</label><input id="templateJobType" name="tJobType" className="input" value={tJobType} onChange={e => setTJobType(e.target.value)} placeholder="shingle, rubber, metal, repair" /></div>
           </div>
-          <div><label className="label">Company Header</label><input className="input" value={tHeader} onChange={e => setTHeader(e.target.value)} /></div>
-          <div><label className="label">Services Performed</label><textarea className="input textarea" value={tServices} onChange={e => setTServices(e.target.value)} style={{ minHeight: 140 }} /></div>
-          <div><label className="label">Warranty Text</label><textarea className="input textarea" value={tWarranty} onChange={e => setTWarranty(e.target.value)} style={{ minHeight: 80 }} /></div>
-          <div><label className="label">Payment Instructions</label><input className="input" value={tPayment} onChange={e => setTPayment(e.target.value)} /></div>
-          <div><label className="label">Thank-You Text</label><input className="input" value={tThankYou} onChange={e => setTThankYou(e.target.value)} /></div>
-          <div><label className="label">License #</label><input className="input" value={tLicense} onChange={e => setTLicense(e.target.value)} /></div>
+          <div><label htmlFor="templateHeader" className="label">Company Header</label><input id="templateHeader" name="tHeader" className="input" value={tHeader} onChange={e => setTHeader(e.target.value)} /></div>
+          <div><label htmlFor="templateServices" className="label">Services Performed</label><textarea id="templateServices" name="tServices" className="input textarea" value={tServices} onChange={e => setTServices(e.target.value)} style={{ minHeight: 140 }} /></div>
+          <div><label htmlFor="templateWarranty" className="label">Warranty Text</label><textarea id="templateWarranty" name="tWarranty" className="input textarea" value={tWarranty} onChange={e => setTWarranty(e.target.value)} style={{ minHeight: 80 }} /></div>
+          <div><label htmlFor="templatePayment" className="label">Payment Instructions</label><input id="templatePayment" name="tPayment" className="input" value={tPayment} onChange={e => setTPayment(e.target.value)} /></div>
+          <div><label htmlFor="templateThankYou" className="label">Thank-You Text</label><input id="templateThankYou" name="tThankYou" className="input" value={tThankYou} onChange={e => setTThankYou(e.target.value)} /></div>
+          <div><label htmlFor="templateLicense" className="label">License #</label><input id="templateLicense" name="tLicense" className="input" value={tLicense} onChange={e => setTLicense(e.target.value)} /></div>
           <button type="submit" className="btn btn-primary btn-full">{editTemplate ? 'Save Template' : 'Create Template'}</button>
         </form>
       </Modal>

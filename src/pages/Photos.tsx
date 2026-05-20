@@ -373,21 +373,21 @@ export function Photos() {
             <img src={previewUrl} alt="Preview" style={{ width: '100%', maxHeight: 240, objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
           )}
           <div>
-            <label className="label">Caption (optional)</label>
-            <input className="input" value={caption} onChange={e => setCaption(e.target.value)} placeholder="Quick label for this photo" />
+            <label htmlFor="photoCaption" className="label">Caption (optional)</label>
+            <input id="photoCaption" name="caption" className="input" value={caption} onChange={e => setCaption(e.target.value)} placeholder="Quick label for this photo" />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label className="label">Source</label>
-              <select className="input select" value={photoSource} onChange={e => setPhotoSource(e.target.value as PhotoSource)}>
+              <label htmlFor="photoSource" className="label">Source</label>
+              <select id="photoSource" name="source" className="input select" value={photoSource} onChange={e => setPhotoSource(e.target.value as PhotoSource)}>
                 {PHOTO_SOURCES.map(s => (
                   <option key={s} value={s}>{T.PHOTO_SOURCE_LABELS[s]}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="label">Link to Job</label>
-              <select className="input select" value={photoJobId || ''} onChange={e => setPhotoJobId(e.target.value || null)}>
+              <label htmlFor="photoJobId" className="label">Link to Job</label>
+              <select id="photoJobId" name="jobId" className="input select" value={photoJobId || ''} onChange={e => setPhotoJobId(e.target.value || null)}>
                 <option value="">None</option>
                 {jobs.filter(j => !j.archivedAt).map(j => (
                   <option key={j.id} value={j.id}>{j.customerName} — {j.address}</option>
@@ -607,36 +607,36 @@ export function Photos() {
                       {isEditing && (
                         <div className="stack stack-sm" style={{ marginTop: 4 }}>
                           <div>
-                            <label className="label">Customer Name</label>
-                            <input className="input" value={item.customerName} onChange={e => updateExtractedItem(idx, 'customerName', e.target.value)} />
+                            <label htmlFor={`extractedCustomerName-${idx}`} className="label">Customer Name</label>
+                            <input id={`extractedCustomerName-${idx}`} name={`customerName-${idx}`} autoComplete="name" className="input" value={item.customerName} onChange={e => updateExtractedItem(idx, 'customerName', e.target.value)} />
                           </div>
                           <div>
-                            <label className="label">Address</label>
-                            <input className="input" value={item.address} onChange={e => updateExtractedItem(idx, 'address', e.target.value)} />
+                            <label htmlFor={`extractedAddress-${idx}`} className="label">Address</label>
+                            <input id={`extractedAddress-${idx}`} name={`address-${idx}`} autoComplete="street-address" className="input" value={item.address} onChange={e => updateExtractedItem(idx, 'address', e.target.value)} />
                           </div>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                             <div>
-                              <label className="label">Phone</label>
-                              <input className="input" value={item.phone} onChange={e => updateExtractedItem(idx, 'phone', e.target.value)} />
+                              <label htmlFor={`extractedPhone-${idx}`} className="label">Phone</label>
+                              <input id={`extractedPhone-${idx}`} name={`phone-${idx}`} autoComplete="tel" className="input" type="tel" value={item.phone} onChange={e => updateExtractedItem(idx, 'phone', e.target.value)} />
                             </div>
                             <div>
-                              <label className="label">Email</label>
-                              <input className="input" type="email" value={item.email} onChange={e => updateExtractedItem(idx, 'email', e.target.value)} />
+                              <label htmlFor={`extractedEmail-${idx}`} className="label">Email</label>
+                              <input id={`extractedEmail-${idx}`} name={`email-${idx}`} autoComplete="email" className="input" type="email" value={item.email} onChange={e => updateExtractedItem(idx, 'email', e.target.value)} />
                             </div>
                           </div>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                             <div>
-                              <label className="label">Estimate $</label>
-                              <input className="input" type="number" value={item.estimateAmount ?? ''} onChange={e => updateExtractedItem(idx, 'estimateAmount', e.target.value ? Number(e.target.value) : null)} />
+                              <label htmlFor={`extractedEstimate-${idx}`} className="label">Estimate $</label>
+                              <input id={`extractedEstimate-${idx}`} name={`estimate-${idx}`} className="input" type="number" value={item.estimateAmount ?? ''} onChange={e => updateExtractedItem(idx, 'estimateAmount', e.target.value ? Number(e.target.value) : null)} />
                             </div>
                             <div>
-                              <label className="label">Date</label>
-                              <input className="input" type="date" value={item.scheduledDate ?? ''} onChange={e => updateExtractedItem(idx, 'scheduledDate', e.target.value || null)} />
+                              <label htmlFor={`extractedDate-${idx}`} className="label">Date</label>
+                              <input id={`extractedDate-${idx}`} name={`date-${idx}`} className="input" type="date" value={item.scheduledDate ?? ''} onChange={e => updateExtractedItem(idx, 'scheduledDate', e.target.value || null)} />
                             </div>
                           </div>
                           <div>
-                            <label className="label">Job Type</label>
-                            <select className="input select" value={item.jobType} onChange={e => updateExtractedItem(idx, 'jobType', e.target.value)}>
+                            <label htmlFor={`extractedJobType-${idx}`} className="label">Job Type</label>
+                            <select id={`extractedJobType-${idx}`} name={`jobType-${idx}`} className="input select" value={item.jobType} onChange={e => updateExtractedItem(idx, 'jobType', e.target.value)}>
                               <option value="shingle">Shingle</option>
                               <option value="rubber roof">Rubber Roof</option>
                               <option value="metal roof">Metal Roof</option>

@@ -164,18 +164,18 @@ export function JobDetail() {
       {/* Edit modal */}
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit Job">
         <div className="stack stack-md">
-          <div><label className="label">Customer Name</label><input className="input" value={customerName} onChange={e => setCustomerName(e.target.value)} /></div>
+          <div><label htmlFor="editCustomerName" className="label">Customer Name</label><input id="editCustomerName" name="customerName" autoComplete="name" className="input" value={customerName} onChange={e => setCustomerName(e.target.value)} /></div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div><label className="label">Phone</label><input className="input" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} /></div>
-            <div><label className="label">Email</label><input className="input" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} /></div>
+            <div><label htmlFor="editCustomerPhone" className="label">Phone</label><input id="editCustomerPhone" name="customerPhone" autoComplete="tel" className="input" type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} /></div>
+            <div><label htmlFor="editCustomerEmail" className="label">Email</label><input id="editCustomerEmail" name="customerEmail" autoComplete="email" className="input" type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} /></div>
           </div>
-          <div><label className="label">Address</label><input className="input" value={address} onChange={e => setAddress(e.target.value)} /></div>
-          <div><label className="label">Description</label><textarea className="input textarea" value={description} onChange={e => setDescription(e.target.value)} /></div>
-          <div><label className="label">Notes</label><textarea className="input textarea" value={notes} onChange={e => setNotes(e.target.value)} /></div>
+          <div><label htmlFor="editAddress" className="label">Address</label><input id="editAddress" name="address" autoComplete="street-address" className="input" value={address} onChange={e => setAddress(e.target.value)} /></div>
+          <div><label htmlFor="editDescription" className="label">Description</label><textarea id="editDescription" name="description" className="input textarea" value={description} onChange={e => setDescription(e.target.value)} /></div>
+          <div><label htmlFor="editNotes" className="label">Notes</label><textarea id="editNotes" name="notes" className="input textarea" value={notes} onChange={e => setNotes(e.target.value)} /></div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-            <div><label className="label">Estimate $</label><input className="input" type="number" value={estimateAmount} onChange={e => setEstimateAmount(e.target.value)} /></div>
-            <div><label className="label">Invoice $</label><input className="input" type="number" value={invoiceAmount} onChange={e => setInvoiceAmount(e.target.value)} /></div>
-            <div><label className="label">Scheduled</label><input className="input" type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)} /></div>
+            <div><label htmlFor="editEstimateAmount" className="label">Estimate $</label><input id="editEstimateAmount" name="estimateAmount" className="input" type="number" value={estimateAmount} onChange={e => setEstimateAmount(e.target.value)} /></div>
+            <div><label htmlFor="editInvoiceAmount" className="label">Invoice $</label><input id="editInvoiceAmount" name="invoiceAmount" className="input" type="number" value={invoiceAmount} onChange={e => setInvoiceAmount(e.target.value)} /></div>
+            <div><label htmlFor="editScheduledDate" className="label">Scheduled</label><input id="editScheduledDate" name="scheduledDate" className="input" type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)} /></div>
           </div>
           <button className="btn btn-primary btn-full" onClick={handleSave}>Save Changes</button>
         </div>
