@@ -83,11 +83,11 @@ async function fileOrBlobToBase64(source: File | Blob): Promise<{ base64: string
   const SIZE_THRESHOLD = 1 * 1024 * 1024  // only compress if > 1MB
 
   // Small files: skip compression
-  if (source.size < SIZE_THRESHOLD && !mimeType.includes('heic')) {
+  if (source.size < SIZE_THRESHOLD) {
     return blobToBase64(source, mimeType)
   }
 
-  // Large files or HEIC: resize + compress via canvas
+  // Large files: resize + compress via canvas
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(source)
     const img = new Image()
@@ -115,7 +115,17 @@ async function fileOrBlobToBase64(source: File | Blob): Promise<{ base64: string
         reject(err)
       }
     }
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Failed to load image for compression')) }
+    img.onerror = async () => { 
+      URL.revokeObjectURL(url)
+      try {
+        // If canvas compression fails (e.g., HEIC on unsupported browsers like Chrome),
+        // gracefully fall back to sending the original uncompressed file to Gemini.
+        const fallback = await blobToBase64(source, mimeType)
+        resolve(fallback)
+      } catch (err) {
+        reject(new Error('Failed to load image for compression and fallback failed'))
+      }
+    }
     img.src = url
   })
 }
